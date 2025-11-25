@@ -1,0 +1,15 @@
+vllm
+transformers
+torch
+numpy
+pandas
+docker
+pytest
+scipy
+networkx
+pydantic
+openai
+anthropic
+matplotlib
+seaborn
+jupyterlab

@@ -1,0 +1,10 @@
+openai
+numpy
+scipy
+pytest
+python-dotenv
+sentence-transformers
+matplotlib
+pandas
+fastapi
+uvicorn

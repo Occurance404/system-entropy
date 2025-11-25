@@ -1,0 +1,13 @@
+.env
+.venv
+__pycache__
+*.log
+*.pyc
+.pytest_cache
+.gemini
+nohup.out
+data/logs_real/
+data/logs_telephone/
+data/logs_terminal_bench/
+runs/
+terminal-bench/
