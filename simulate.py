@@ -1,8 +1,11 @@
 import json
 import os
+import uuid
+import argparse
 from datetime import datetime
 from src.orchestrator.engine import Orchestrator
 from src.monitor.probe import StateMonitor
+from src.monitor.terminal_bench_monitor import get_monitor
 from src.agent.mock_agent import ScriptedAgent
 
 def run_simulation(scenario_id: str = "drug_filter_shock", max_steps: int = 10):
@@ -11,56 +14,63 @@ def run_simulation(scenario_id: str = "drug_filter_shock", max_steps: int = 10):
     # 1. Initialize Components
     monitor = StateMonitor()
     agent = ScriptedAgent(model_name="Simulated-Fail-Bot")
-    orchestrator = Orchestrator(scenario_id=scenario_id, agent=agent, monitor=monitor)
+    tb_monitor = get_monitor() # Unified Logger
     
-    # 2. Setup Logging
-    log_dir = "data/logs"
-    os.makedirs(log_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = f"{log_dir}/sim_{scenario_id}_{timestamp}.jsonl"
+    run_id = str(uuid.uuid4())
+    print(f"Run ID: {run_id}")
     
-    print(f"Logging to: {log_file}")
+    # 2. Initialize Orchestrator
+    orchestrator = Orchestrator(
+        scenario_id=scenario_id, 
+        agent=agent, 
+        monitor=monitor,
+        run_id=run_id,
+        metrics_monitor=tb_monitor
+    )
     
-    with open(log_file, "w") as f:
-        # 3. Simulation Loop
-        for i in range(max_steps):
-            print(f"\n[Step {i+1}] Executing...")
-            
-            # Run Orchestrator Step
-            step_result = orchestrator.step()
-            
-            # Enrich Log
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "step_index": i + 1,
-                "orchestrator_state": {
-                    "panic_counter": orchestrator.panic_counter,
-                    "entropy_threshold": orchestrator.entropy_threshold
-                },
-                "result": step_result
-            }
-            
-            # Write to file
-            f.write(json.dumps(log_entry) + "\n")
-            
-            # Console Output
-            print(f"  Event Type: {step_result['type']}")
-            if step_result['type'] == 'perturbation_triggered':
-                scr = step_result['probe_metrics']['scr']
-                print(f"  >>> PERTURBATION DETECTED! Triggering Branching Probe.")
-                print(f"  >>> Semantic Collapse Ratio (SCR): {scr:.4f}")
-                if scr > 0.5:
-                    print("  >>> WARN: High Cognitive Collapse detected!")
-            
-            if step_result['type'] == 'tool_execution':
-                print(f"  Tool: {step_result['tool']}")
-                print(f"  IGE (Info Gain): {step_result['ige']:.4f}")
-            
-            if step_result['type'] == 'intervention':
-                print(f"  !!! INTERVENTION TRIGGERED !!! Reason: {step_result.get('reason')}")
-                break # End simulation on intervention for this demo
+    # 3. Simulation Loop
+    for i in range(max_steps):
+        print(f"\n[Step {i+1}] Executing...")
+        
+        # Run Orchestrator Step (logs internally via tb_monitor)
+        step_result = orchestrator.step()
+        
+        # Console Output
+        event_type = step_result.get('event_type', step_result.get('type', 'unknown'))
+        print(f"  Event Type: {event_type}")
+        
+        if event_type == 'perturbation_triggered':
+            scr = step_result.get('scr', 0.0)
+            print(f"  >>> PERTURBATION DETECTED! Triggering Branching Probe.")
+            print(f"  >>> Semantic Collapse Ratio (SCR): {scr:.4f}")
+            if scr > 0.5:
+                print("  >>> WARN: High Cognitive Collapse detected!")
+        
+        if event_type == 'tool_execution':
+            print(f"  Tool: {step_result.get('tool')}")
+            print(f"  IGE (Info Gain): {step_result.get('ige')}")
+            print(f"  RDI (Regressive Debt): {step_result.get('rdi')}")
+        
+        if event_type == 'intervention':
+            print(f"  !!! INTERVENTION TRIGGERED !!!")
+            break 
 
-    print(f"\n--- Simulation Complete. Check {log_file} for details ---")
+    # 4. Compute and Save Drift Summary
+    print("\n--- Computing Drift Metrics ---")
+    summary = orchestrator.compute_drift_summary()
+    summary_file = f"data/logs_terminal_bench/run_{run_id}_summary.json"
+    with open(summary_file, "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"Summary saved to: {summary_file}")
+    print(f"Max Drift: {summary['max_drift']:.4f}")
+    print(f"Recovered at Step: {summary['recovered_at_step']}")
+
+    print(f"\n--- Simulation Complete. Logs in data/logs_terminal_bench/ ---")
 
 if __name__ == "__main__":
-    run_simulation()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scenario", type=str, default="drug_filter_shock", help="Scenario ID")
+    parser.add_argument("--steps", type=int, default=10, help="Max steps")
+    args = parser.parse_args()
+    
+    run_simulation(scenario_id=args.scenario, max_steps=args.steps)

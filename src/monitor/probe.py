@@ -1,6 +1,7 @@
 import math
 import ast
 import numpy as np
+import zlib
 from typing import List, Dict, Any
 from scipy.spatial.distance import cosine
 
@@ -13,10 +14,30 @@ class StateMonitor:
     1. Information Gain Efficiency (IGE)
     2. Semantic Collapse Ratio (SCR)
     3. Standard Entropy Metrics
+    4. Compression Ratio (Repetition/Loop Detector)
     """
     
     def __init__(self):
         self.metrics_log = []
+
+    def calculate_compression_ratio(self, text: str) -> float:
+        """
+        Calculates the Compression Ratio of the output text.
+        Ratio = Compressed_Size / Original_Size
+        
+        - ~1.0: Random noise / High Entropy (or very short text)
+        - ~0.4-0.6: Normal Natural Language
+        - < 0.2: Highly Repetitive / Looping (Context Rot indicator)
+        """
+        if not text:
+            return 1.0
+            
+        encoded = text.encode("utf-8")
+        if len(encoded) == 0:
+            return 1.0
+            
+        compressed = zlib.compress(encoded)
+        return len(compressed) / len(encoded)
 
     def calculate_information_gain_efficiency(self, h_pre: float, h_post: float, token_cost: int) -> float:
         """
@@ -57,6 +78,38 @@ class StateMonitor:
             return 0.0
             
         return float(np.mean(distances))
+
+    def calculate_entropy_from_logprobs(self, logprobs: List[Any]) -> float:
+        """
+        Calculates a proxy for Entropy (Surprisal) from a sequence of token log probabilities.
+        Since we only have the logprob of the *chosen* token, we calculate the Average Negative Log Probability.
+        
+        H ~ - (1/N) * Sum(log(p_chosen))
+        """
+        if not logprobs:
+            return 0.0
+        
+        # Flatten/Extract chosen logprobs if nested lists (mock data often does this)
+        clean_logprobs = []
+        for lp in logprobs:
+            if isinstance(lp, list):
+                # Assuming the first one is the chosen one or best candidate
+                if lp:
+                    clean_logprobs.append(lp[0])
+                else:
+                    clean_logprobs.append(0.0)
+            elif isinstance(lp, (int, float)):
+                clean_logprobs.append(lp)
+            else:
+                # Unknown type, skip or default
+                clean_logprobs.append(0.0)
+                
+        if not clean_logprobs:
+            return 0.0
+            
+        # Sum of negative log probabilities
+        total_surprisal = sum(-lp for lp in clean_logprobs)
+        return total_surprisal / len(clean_logprobs)
 
     def calculate_entropy(self, token_distributions: List[List[float]]) -> float:
         """
@@ -136,8 +189,19 @@ class StateMonitor:
         except SyntaxError:
             return -1 # Indicates parsing failure (broken code)
 
-    def check_goal_deviance(self, current_plan_embedding, ground_truth_embedding):
+    def check_goal_deviance(self, current_plan_embedding: List[float], ground_truth_embedding: List[float]) -> float:
         """
-        Compares embeddings to check for drift.
+        Compares embeddings to check for drift (Regressive Debt Index - RDI component).
+        Returns cosine distance: 0.0 (identical) to 2.0 (opposite).
+        
+        Args:
+            current_plan_embedding: List of floats representing the current plan vector.
+            ground_truth_embedding: List of floats representing the ground truth/initial goal vector.
         """
-        pass
+        if not current_plan_embedding or not ground_truth_embedding:
+            return 0.0
+            
+        try:
+            return cosine(current_plan_embedding, ground_truth_embedding)
+        except Exception:
+            return 0.0

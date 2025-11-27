@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 
-def load_latest_log(log_dir="data/logs_real"):
+def load_latest_log(log_dir="data/logs_rescue"):
     # Find the latest log file
     list_of_files = glob.glob(f'{log_dir}/*.jsonl')
     if not list_of_files:
@@ -17,7 +17,11 @@ def load_latest_log(log_dir="data/logs_real"):
     data = []
     with open(latest_file, 'r') as f:
         for line in f:
-            data.append(json.loads(line))
+            entry = json.loads(line)
+            # Flatten metrics if present
+            if "metrics" in entry and isinstance(entry["metrics"], dict):
+                entry.update(entry["metrics"])
+            data.append(entry)
     return pd.DataFrame(data)
 
 def plot_metrics(df, output_path="data/results/experiment_summary.png"):
@@ -34,7 +38,7 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
 
     steps = df['step_index']
     
-    fig, axes = plt.subplots(5, 1, figsize=(12, 18), sharex=True) # 5 subplots now
+    fig, axes = plt.subplots(6, 1, figsize=(12, 22), sharex=True) # 6 subplots now
     
     # Plot 1: Current Entropy
     axes[0].plot(steps, df['current_entropy'], marker='o', linestyle='-', color='blue', label='Current Entropy')
@@ -88,10 +92,24 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
             axes[4].text(row['step_index'] + offset, row['rdi'] + 0.01, f"{row['rdi']:.2f}", ha='center')
 
     axes[4].set_ylabel('Complexity/Debt')
-    axes[4].set_xlabel('Simulation Step')
     axes[4].set_title('Code Quality Metrics')
     axes[4].grid(True, alpha=0.3)
     axes[4].legend()
+
+    # Plot 6: Compression Ratio (Repetition Detector)
+    # Ensure compression_ratio column exists
+    if 'compression_ratio' in df.columns:
+        cr_data = df[df['compression_ratio'].notna()]
+        if not cr_data.empty:
+            axes[5].plot(cr_data['step_index'], cr_data['compression_ratio'], marker='s', linestyle='-', color='teal', label='Compression Ratio')
+            axes[5].axhline(0.2, color='red', linestyle='--', alpha=0.5, label='Looping Threshold (<0.2)')
+            
+    axes[5].set_ylabel('Ratio (Compressed/Raw)')
+    axes[5].set_title('Structural Health (Compression Ratio)')
+    axes[5].set_xlabel('Simulation Step')
+    axes[5].set_ylim(0, 1.2)
+    axes[5].grid(True, alpha=0.3)
+    axes[5].legend()
 
 
     plt.tight_layout()
@@ -108,7 +126,11 @@ if __name__ == "__main__":
         data = []
         with open(args.log_file, 'r') as f:
             for line in f:
-                data.append(json.loads(line))
+                entry = json.loads(line)
+                # Flatten metrics if present
+                if "metrics" in entry and isinstance(entry["metrics"], dict):
+                    entry.update(entry["metrics"])
+                data.append(entry)
         df = pd.DataFrame(data)
     else:
         df = load_latest_log()

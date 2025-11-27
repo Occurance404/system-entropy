@@ -74,6 +74,18 @@ class OpenAICompatibleAgent(AgentWrapper):
                         "required": ["query"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "run_shell",
+                    "description": "Executes a shell command in the sandbox. Use this for navigating directories, running tests, or managing files.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"command": {"type": "string"}},
+                        "required": ["command"]
+                    }
+                }
             }
         ]
 

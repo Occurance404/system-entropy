@@ -2,11 +2,13 @@ import os
 import json
 import math
 from datetime import datetime
+from typing import List, Optional, Any
 from sentence_transformers import SentenceTransformer
 from scipy.spatial.distance import cosine
 import numpy as np
 
-# Re-use logic from your existing StateMonitor
+from src.shared.constants import LOG_SCHEMA
+
 class TerminalBenchMonitor:
     def __init__(self):
         self.log_file = f"data/logs_terminal_bench/tb_monitor_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
@@ -78,58 +80,64 @@ class TerminalBenchMonitor:
         
         return float(np.mean(distances)) if distances else 0.0
 
-    def log_step(self, model_name, prompt, messages, response_obj, branching_func=None):
+    def log_step(self, 
+                 run_id: str,
+                 scenario_id: str,
+                 model_name: str,
+                 step_index: int,
+                 event_type: str,
+                 prompt: str = "",
+                 response_obj: Optional[dict] = None,
+                 current_entropy: float = 0.0,
+                 ige: Optional[float] = None,
+                 scr: Optional[float] = None,
+                 cbf: Optional[int] = None,
+                 rdi: Optional[float] = None,
+                 panic_counter: int = 0,
+                 tool: Optional[str] = None,
+                 compression_ratio: Optional[float] = None,
+                 branching_func=None):
         """
         Main logging hook.
+        Uses the unified LOG_SCHEMA.
         branching_func: A callable that generates N divergent responses (for SCR).
         """
         try:
-            # 1. Extract Main Metrics
-            # Note: LiteLLM response object structure
-            choice = response_obj["choices"][0]
-            content = choice["message"]["content"]
+            # If response_obj is provided, we can refine entropy calculation
+            # But ideally, the caller passes 'current_entropy' already calculated
             
-            # Extract logprobs if available (need to ask LiteLLM to return them)
-            token_distributions = []
-            if "logprobs" in choice and choice["logprobs"]:
-                 # Handle OpenAI-style logprobs structure
-                 if "content" in choice["logprobs"]:
-                     # Iterate over tokens in the sequence
-                     for t in choice["logprobs"]["content"]:
-                         # Extract Top-K candidates for this token position
-                         if "top_logprobs" in t and t["top_logprobs"]:
-                             candidates = [c["logprob"] for c in t["top_logprobs"]]
-                             token_distributions.append(candidates)
-                         elif "logprob" in t:
-                             # Fallback (should not happen with top_logprobs=5)
-                             token_distributions.append([t["logprob"]])
-            
-            entropy = self.calculate_entropy(token_distributions)
-
-            # 2. Branching Probe (Optional - expensive)
-            # We might only do this if entropy is high, or every N steps
-            scr = None
+            # Branching Probe Logic (if requested and function provided)
             branches = []
-            if branching_func:
+            if branching_func and scr is None:
                 print("Monitor: Triggering Branching Probe...")
-                branches = branching_func() # Expects list of strings
+                branches = branching_func() 
                 scr = self.calculate_scr(branches)
 
-            # 3. Log Entry
+            # Construct Log Entry matching LOG_SCHEMA
             entry = {
                 "timestamp": datetime.now().isoformat(),
+                "run_id": run_id,
+                "scenario_id": scenario_id,
                 "model": model_name,
-                "prompt_snippet": prompt[:100],
-                "response_length": len(content) if content else 0,
-                "entropy": entropy,
+                "step_index": step_index,
+                "event_type": event_type,
+                "current_entropy": current_entropy,
+                "ige": ige,
                 "scr": scr,
+                "cbf": cbf,
+                "rdi": rdi,
+                "panic_counter": panic_counter,
+                "tool": tool,
+                "compression_ratio": compression_ratio,
+                # Extra debug info allowed
+                "prompt_snippet": prompt[:100] if prompt else "",
                 "branches_count": len(branches)
             }
             
             with open(self.log_file, "a") as f:
                 f.write(json.dumps(entry) + "\n")
                 
-            print(f"Monitor: Logged step. Entropy: {entropy:.4f}, SCR: {scr}")
+            # print(f"Monitor: Logged step {step_index}. Entropy: {current_entropy:.4f}")
 
         except Exception as e:
             print(f"Monitor Error during logging: {e}")

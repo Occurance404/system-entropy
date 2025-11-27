@@ -13,3 +13,8 @@ anthropic
 matplotlib
 seaborn
 jupyterlab
+python-dotenv
+sentence-transformers
+fastapi
+uvicorn
+python-multipart

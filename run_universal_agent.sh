@@ -60,7 +60,13 @@ export OPENAI_API_KEY="${VLLM_API_KEY}" # Pass real key to proxy
 export TB_TASK_ID="$TASK_ID"
 
 # Add venv python to PATH for agent command
-export PATH="$(pwd)/.venv/bin:$PATH"
+# This is usually for convenience, but for eval'ed commands, being explicit is safer.
+# export PATH="$(pwd)/.venv/bin:$PATH" # Original line, now handled more robustly below
+
+# Modify AGENT_CMD to explicitly use venv python if it's a python script
+if [[ "$AGENT_CMD" == python* ]]; then
+    AGENT_CMD="$(pwd)/.venv/bin/$AGENT_CMD"
+fi
 
 # Execute
 eval "$AGENT_CMD"

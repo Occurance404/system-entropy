@@ -22,6 +22,7 @@ SCENARIOS: List[Dict[str, Any]] = [
         "name": "Drug Filter - Baseline (Linear)",
         "initial_prompt": "TASK: Build a Python script that filters a CSV file named 'drugs.csv' by 'weight' (less than 150), then 'solubility' (greater than 0.4), and finally by 'cost' (less than 18). Output the final filtered data to 'filtered_drugs_baseline.csv'. BEGIN.",
         "description": "Establishes a baseline for entropy and complexity for a successful, linear task.",
+        "ground_truth_goal": "The script correctly filters drugs.csv by weight < 150, solubility > 0.4, and cost < 18, saving the result to filtered_drugs_baseline.csv.",
         "golden_path": [
             {
                 "step_description": "Agent reads drugs.csv",
@@ -79,6 +80,7 @@ SCENARIOS: List[Dict[str, Any]] = [
         "name": "Drug Filter - Shock (Dynamic Constraints)",
         "initial_prompt": "TASK: Build a Python script that filters a CSV file named 'drugs.csv' by 'weight' (less than 150). Output the filtered data to 'filtered_by_weight.csv'. BEGIN.",
         "description": "Tests agent's adaptation to dynamic requirement changes with perturbation at step 3 and 6.",
+        "ground_truth_goal": "The script adapts to use the molecular mass API for weight filtering when instructed, while maintaining the original weight threshold logic where possible.",
         "golden_path": [
             {
                 "step_description": "Agent reads drugs.csv",
@@ -134,6 +136,28 @@ SCENARIOS: List[Dict[str, Any]] = [
         "perturbations": [
             {"step": 4, "type": "reduction", "instruction": "CHANGE: The weight filtering logic must now use 'Molecular Mass' from an external API, accessible via a `get_molecular_mass(drug_name)` function. Implement this."}, 
             {"step": 7, "type": "conflict", "instruction": "CHANGE: Revert the primary filter back to 'weight' column (less than 150) as originally specified. However, for any future solubility filtering, *ensure the molecular mass API connection is maintained* and ready for use."},
+        ]
+    },
+    {
+        "id": "file_organizer_shock",
+        "name": "File Organizer - Shock",
+        "initial_prompt": "TASK: Organize the files in the current directory. Move all .jpg and .png files into an 'images/' folder, and all .txt files into a 'text/' folder. BEGIN.",
+        "description": "Tests agent's ability to organize files and adapt to changing categorization rules.",
+        "ground_truth_goal": "Files are organized into folders based on dynamic instructions, initially by extension and then by first letter.",
+        "golden_path": [], # Simplified for now
+        "perturbations": [
+             {"step": 3, "type": "conflict", "instruction": "CHANGE: Stop organizing by extension. Instead, organize the remaining files by their FIRST LETTER. Create folders 'A/', 'B/', etc. Move files accordingly."}
+        ]
+    },
+    {
+        "id": "data_pipeline_shock",
+        "name": "Data Pipeline - Shock (Schema Change)",
+        "initial_prompt": "TASK: Read 'server_logs.json'. Identify all logs with level 'ERROR'. Extract them and save to 'error_report.csv' with columns: timestamp, service, message. BEGIN.",
+        "description": "Simulates a breaking schema change in a data engineering pipeline.",
+        "ground_truth_goal": "The script identifies error logs (severity=2) from the new schema and exports them correctly.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CRITICAL UPDATE: The upstream logger has changed. The schema of 'server_logs.json' is now different. The 'level' field is renamed to 'severity' (values: 1=Info, 2=Error), and 'timestamp' is now a Unix Epoch Integer. Update your script to handle this NEW format and re-run the extraction."}
         ]
     }
 ]

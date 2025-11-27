@@ -1,0 +1,302 @@
+[
+  {
+    "timestamp": "2025-11-26T18:44:34.903124",
+    "level": "INFO",
+    "service": "frontend-ui",
+    "message": "Transaction 0903143e processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:45:34.903160",
+    "level": "INFO",
+    "service": "payment-gateway",
+    "message": "Transaction 76e11aad processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:46:34.903172",
+    "level": "DEBUG",
+    "service": "frontend-ui",
+    "message": "Connection timeout in frontend-ui."
+  },
+  {
+    "timestamp": "2025-11-26T18:47:34.903178",
+    "level": "INFO",
+    "service": "payment-gateway",
+    "message": "Transaction 206dc6f5 processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:48:34.903190",
+    "level": "INFO",
+    "service": "payment-gateway",
+    "message": "Transaction 09689832 processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:49:34.903199",
+    "level": "INFO",
+    "service": "frontend-ui",
+    "message": "Transaction 753102e2 processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:50:34.903209",
+    "level": "WARN",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T18:51:34.903218",
+    "level": "INFO",
+    "service": "auth-service",
+    "message": "Transaction 93b000f8 processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:52:34.903228",
+    "level": "INFO",
+    "service": "frontend-ui",
+    "message": "Transaction df9e1232 processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:53:34.903236",
+    "level": "WARN",
+    "service": "payment-gateway",
+    "message": "Connection timeout in payment-gateway."
+  },
+  {
+    "timestamp": "2025-11-26T18:54:34.903242",
+    "level": "ERROR",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T18:55:34.903246",
+    "level": "INFO",
+    "service": "database-shard-01",
+    "message": "Transaction 77e859ea processed."
+  },
+  {
+    "timestamp": "2025-11-26T18:56:34.903255",
+    "level": "DEBUG",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T18:57:34.903257",
+    "level": "DEBUG",
+    "service": "auth-service",
+    "message": "Connection timeout in auth-service."
+  },
+  {
+    "timestamp": "2025-11-26T18:58:34.903260",
+    "level": "ERROR",
+    "service": "payment-gateway",
+    "message": "Connection timeout in payment-gateway."
+  },
+  {
+    "timestamp": "2025-11-26T18:59:34.903263",
+    "level": "ERROR",
+    "service": "payment-gateway",
+    "message": "Critical failure: Database deadlock detected."
+  },
+  {
+    "timestamp": "2025-11-26T19:00:34.903268",
+    "level": "WARN",
+    "service": "auth-service",
+    "message": "Connection timeout in auth-service."
+  },
+  {
+    "timestamp": "2025-11-26T19:01:34.903272",
+    "level": "INFO",
+    "service": "auth-service",
+    "message": "Transaction 860560ae processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:02:34.903277",
+    "level": "INFO",
+    "service": "database-shard-01",
+    "message": "Transaction c040c093 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:03:34.903282",
+    "level": "ERROR",
+    "service": "frontend-ui",
+    "message": "Connection timeout in frontend-ui."
+  },
+  {
+    "timestamp": "2025-11-26T19:04:34.903285",
+    "level": "DEBUG",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T19:05:34.903287",
+    "level": "DEBUG",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T19:06:34.903290",
+    "level": "DEBUG",
+    "service": "payment-gateway",
+    "message": "Connection timeout in payment-gateway."
+  },
+  {
+    "timestamp": "2025-11-26T19:07:34.903292",
+    "level": "DEBUG",
+    "service": "auth-service",
+    "message": "Connection timeout in auth-service."
+  },
+  {
+    "timestamp": "2025-11-26T19:08:34.903295",
+    "level": "DEBUG",
+    "service": "auth-service",
+    "message": "Connection timeout in auth-service."
+  },
+  {
+    "timestamp": "2025-11-26T19:09:34.903298",
+    "level": "DEBUG",
+    "service": "payment-gateway",
+    "message": "Connection timeout in payment-gateway."
+  },
+  {
+    "timestamp": "2025-11-26T19:10:34.903300",
+    "level": "WARN",
+    "service": "payment-gateway",
+    "message": "Connection timeout in payment-gateway."
+  },
+  {
+    "timestamp": "2025-11-26T19:11:34.903303",
+    "level": "WARN",
+    "service": "auth-service",
+    "message": "Connection timeout in auth-service."
+  },
+  {
+    "timestamp": "2025-11-26T19:12:34.903305",
+    "level": "INFO",
+    "service": "frontend-ui",
+    "message": "Transaction 31893b98 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:13:34.903310",
+    "level": "ERROR",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T19:14:34.903313",
+    "level": "INFO",
+    "service": "frontend-ui",
+    "message": "Transaction 4c9a6ef1 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:15:34.903317",
+    "level": "INFO",
+    "service": "database-shard-01",
+    "message": "Transaction 7f13751a processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:16:34.903322",
+    "level": "INFO",
+    "service": "payment-gateway",
+    "message": "Transaction adad92ce processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:17:34.903327",
+    "level": "INFO",
+    "service": "auth-service",
+    "message": "Transaction c19a0072 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:18:34.903332",
+    "level": "INFO",
+    "service": "payment-gateway",
+    "message": "Transaction 31d9c3ff processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:19:34.903336",
+    "level": "WARN",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T19:20:34.903339",
+    "level": "INFO",
+    "service": "auth-service",
+    "message": "Transaction 8f3754f0 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:21:34.903343",
+    "level": "INFO",
+    "service": "database-shard-01",
+    "message": "Transaction d74a181a processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:22:34.903348",
+    "level": "WARN",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T19:23:34.903350",
+    "level": "INFO",
+    "service": "auth-service",
+    "message": "Transaction 7b82621b processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:24:34.903355",
+    "level": "INFO",
+    "service": "frontend-ui",
+    "message": "Transaction 81f78745 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:25:34.903360",
+    "level": "DEBUG",
+    "service": "auth-service",
+    "message": "Connection timeout in auth-service."
+  },
+  {
+    "timestamp": "2025-11-26T19:26:34.903363",
+    "level": "ERROR",
+    "service": "auth-service",
+    "message": "Critical failure: Database deadlock detected."
+  },
+  {
+    "timestamp": "2025-11-26T19:27:34.903367",
+    "level": "INFO",
+    "service": "payment-gateway",
+    "message": "Transaction 748ba86b processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:28:34.903372",
+    "level": "INFO",
+    "service": "database-shard-01",
+    "message": "Transaction e00addf9 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:29:34.903376",
+    "level": "DEBUG",
+    "service": "database-shard-01",
+    "message": "Connection timeout in database-shard-01."
+  },
+  {
+    "timestamp": "2025-11-26T19:30:34.903379",
+    "level": "ERROR",
+    "service": "payment-gateway",
+    "message": "Connection timeout in payment-gateway."
+  },
+  {
+    "timestamp": "2025-11-26T19:31:34.903382",
+    "level": "INFO",
+    "service": "database-shard-01",
+    "message": "Transaction 8cb964e6 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:32:34.903386",
+    "level": "INFO",
+    "service": "auth-service",
+    "message": "Transaction 900cabe0 processed."
+  },
+  {
+    "timestamp": "2025-11-26T19:33:34.903391",
+    "level": "INFO",
+    "service": "database-shard-01",
+    "message": "Transaction 667975ce processed."
+  }
+]
