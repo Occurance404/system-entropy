@@ -9,7 +9,7 @@ from src.orchestrator.engine import Orchestrator
 from src.services.metrics import EmbeddingMetricService
 from src.agent.real_agent import OpenAICompatibleAgent
 
-def run_rescue_experiment(scenario_id: str, max_steps: int):
+def run_rescue_experiment(scenario_id: str, max_steps: int, enable_rescue: bool):
     # Load environment variables
     config = dotenv_values(".env")
     
@@ -28,7 +28,9 @@ def run_rescue_experiment(scenario_id: str, max_steps: int):
 
     print(f"--- Starting RESCUE Experiment: {scenario_id} ---")
     print(f"Primary Model: {primary_model}")
-    print(f"Rescue Model: {rescue_model}")
+    print(f"Rescue Protocol Enabled: {enable_rescue}")
+    if enable_rescue:
+        print(f"Rescue Model: {rescue_model}")
     
     # 1. Initialize Components
     metric_service = EmbeddingMetricService()
@@ -41,17 +43,13 @@ def run_rescue_experiment(scenario_id: str, max_steps: int):
             api_key=api_key
         )
         
-        print("Initializing Rescue Agent...")
-        # Assuming Rescue Agent might use a different key/url if it's a real GPT-4, 
-        # but for now we assume same endpoint or user configures it.
-        # If rescue model is on a different provider, we might need RESCUE_BASE_URL/API_KEY.
-        # For simplicity, we use the same credentials/URL but different model name,
-        # or assume the user updates .env to point to a proxy that handles both.
-        rescue_agent = OpenAICompatibleAgent(
-            model_name=rescue_model,
-            base_url=config.get("RESCUE_BASE_URL", base_url),
-            api_key=config.get("RESCUE_API_KEY", api_key)
-        )
+        if enable_rescue:
+            print("Initializing Rescue Agent...")
+            rescue_agent = OpenAICompatibleAgent(
+                model_name=rescue_model,
+                base_url=config.get("RESCUE_BASE_URL", base_url),
+                api_key=config.get("RESCUE_API_KEY", api_key)
+            )
     except Exception as e:
         print(f"Failed to initialize Agents: {e}")
         sys.exit(1)
@@ -66,7 +64,8 @@ def run_rescue_experiment(scenario_id: str, max_steps: int):
     log_dir = "data/logs_rescue"
     os.makedirs(log_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = f"{log_dir}/rescue_sim_{scenario_id}_{timestamp}.jsonl"
+    rescue_tag = "rescued" if enable_rescue else "baseline"
+    log_file = f"{log_dir}/sim_{rescue_tag}_{scenario_id}_{timestamp}.jsonl"
     
     print(f"Logging to: {log_file}")
     
@@ -85,7 +84,8 @@ def run_rescue_experiment(scenario_id: str, max_steps: int):
                     "step_index": step_result_dict.get("step_index", i + 1),
                     "orchestrator_state": {
                         "panic_counter": orchestrator.panic_counter,
-                        "current_agent": orchestrator.agent.model_name
+                        "current_agent": orchestrator.agent.model_name,
+                        "rescue_enabled": enable_rescue
                     },
                     "event_type": step_result_dict.get("event_type", "unknown"),
                     "metrics": step_result_dict
@@ -102,26 +102,29 @@ def run_rescue_experiment(scenario_id: str, max_steps: int):
                 if log_entry['event_type'] == 'intervention':
                     print(f"  !!! PANIC DETECTED !!! Reason: {log_entry['metrics'].get('reason')}")
                     
-                    if not rescued:
-                        print(f"  >>> INITIATING RESCUE PROTOCOL: Switching to {rescue_model} <<<")
-                        orchestrator.switch_agent(rescue_agent)
-                        rescued = True
-                        # We do NOT break, we continue with the new agent
+                    if enable_rescue:
+                        if not rescued:
+                            print(f"  >>> INITIATING RESCUE PROTOCOL: Switching to {rescue_model} <<<")
+                            orchestrator.switch_agent(rescue_agent)
+                            rescued = True
+                        else:
+                            print("  >>> Rescue already attempted. Simulation failing despite rescue.")
+                            break
                     else:
-                        print("  >>> Rescue already attempted. Simulation failing despite rescue.")
-                        break
+                        print("  >>> Rescue Disabled. Continuing with Primary Agent to observe collapse.")
 
             except Exception as e:
                 print(f"CRITICAL ERROR at Step {i+1}: {e}")
                 break
 
-    print(f"\n--- Rescue Experiment Complete. Check {log_file} ---")
+    print(f"\n--- Experiment Complete. Check {log_file} ---")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Entropic Stress-Test Rescue Experiment.")
     parser.add_argument("--scenario_id", type=str, default="drug_filter_shock", help="ID of the scenario")
     parser.add_argument("--max_steps", type=int, default=15, help="Max steps")
+    parser.add_argument("--enable_rescue", action="store_true", help="Enable the Rescue Agent protocol.")
     
     args = parser.parse_args()
     
-    run_rescue_experiment(scenario_id=args.scenario_id, max_steps=args.max_steps)
+    run_rescue_experiment(scenario_id=args.scenario_id, max_steps=args.max_steps, enable_rescue=args.enable_rescue)
