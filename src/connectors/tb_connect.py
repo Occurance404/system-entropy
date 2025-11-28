@@ -9,8 +9,9 @@ class TerminalBenchConnector:
     Provides a simple interface for External Agents to interact with the TerminalBench environment.
     Manages the Docker container lifecycle for a specific task.
     """
-    def __init__(self, task_id: str):
+    def __init__(self, task_id: str, image_name: str = "python:3.11-slim"):
         self.task_id = task_id
+        self.image_name = image_name
         self.client = docker.from_env()
         self.container_name = f"tb_universal_{task_id}"
         self.container = None
@@ -18,7 +19,7 @@ class TerminalBenchConnector:
 
     def start(self):
         """Starts the Task Environment (Docker Container)."""
-        print(f"Connector: Starting environment for {self.task_id}...")
+        print(f"Connector: Starting environment for {self.task_id} using image {self.image_name}...")
         
         # Reset CWD
         self.cwd = "/workspace"
@@ -37,7 +38,7 @@ class TerminalBenchConnector:
         # We mount the task data or use the pre-built TB images.
         try:
             self.container = self.client.containers.run(
-                "python:3.11-slim", 
+                self.image_name, 
                 command="tail -f /dev/null", # Keep alive
                 name=self.container_name,
                 detach=True,

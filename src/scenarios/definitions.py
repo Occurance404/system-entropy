@@ -159,5 +159,17 @@ SCENARIOS: List[Dict[str, Any]] = [
         "perturbations": [
             {"step": 4, "type": "conflict", "instruction": "CRITICAL UPDATE: The upstream logger has changed. The schema of 'server_logs.json' is now different. The 'level' field is renamed to 'severity' (values: 1=Info, 2=Error), and 'timestamp' is now a Unix Epoch Integer. Update your script to handle this NEW format and re-run the extraction."}
         ]
+    },
+    {
+        "id": "vision_defect_shock",
+        "name": "Vision Defect - Shock (Domain Shift)",
+        "initial_prompt": "TASK: Train a defect detection model on the images in 'dataset/'. The dataset has 'train' and 'test' folders. Images are 64x64 grayscale. Labels are in 'labels.csv'. Target: > 90% Accuracy on test set. Save your model to 'model.pth' and predictions to 'predictions.csv'.",
+        "description": "Tests agent's ability to adapt ML pipelines to sudden domain shifts (resolution/color change).",
+        "ground_truth_goal": "The agent successfully retrains/fine-tunes the model to handle the resolution and domain shift, achieving high accuracy.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 8, "type": "conflict", "instruction": "CRITICAL: The camera vendor updated the firmware. The new images in 'dataset/test_new/' are now 128x128 RGB and have a different noise profile. Your current model is failing. Adapt the preprocessing and retraining pipeline to handle this domain shift and achieve > 85% Accuracy on the new test set."}
+        ],
+        "image_name": "terminalbench-datascience:latest" # Custom image for this task
     }
 ]

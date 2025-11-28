@@ -3,7 +3,7 @@ import json
 import glob
 from src.orchestrator.engine import Orchestrator
 from src.agent.mock_agent import ScriptedAgent
-from src.monitor.probe import StateMonitor
+from src.services.metrics import EmbeddingMetricService
 from src.monitor.terminal_bench_monitor import get_monitor
 import uuid
 
@@ -18,8 +18,8 @@ def run_smoke_test():
     
     scenario_id = "drug_filter_baseline"
     
-    # Mock Agent
-    monitor = StateMonitor()
+    # Mock Agent & Service
+    metric_service = EmbeddingMetricService()
     agent = ScriptedAgent(model_name="SmokeTestAgent")
     tb_monitor = get_monitor()
     run_id = str(uuid.uuid4())
@@ -27,7 +27,7 @@ def run_smoke_test():
     orchestrator = Orchestrator(
         scenario_id=scenario_id,
         agent=agent,
-        monitor=monitor,
+        metric_service=metric_service,
         run_id=run_id,
         metrics_monitor=tb_monitor
     )

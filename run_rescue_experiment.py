@@ -6,7 +6,7 @@ from datetime import datetime
 from dotenv import dotenv_values 
 
 from src.orchestrator.engine import Orchestrator
-from src.monitor.probe import StateMonitor
+from src.services.metrics import EmbeddingMetricService
 from src.agent.real_agent import OpenAICompatibleAgent
 
 def run_rescue_experiment(scenario_id: str, max_steps: int):
@@ -31,7 +31,7 @@ def run_rescue_experiment(scenario_id: str, max_steps: int):
     print(f"Rescue Model: {rescue_model}")
     
     # 1. Initialize Components
-    monitor = StateMonitor()
+    metric_service = EmbeddingMetricService()
     
     try:
         print("Initializing Primary Agent...")
@@ -57,7 +57,7 @@ def run_rescue_experiment(scenario_id: str, max_steps: int):
         sys.exit(1)
         
     try:
-        orchestrator = Orchestrator(scenario_id=scenario_id, agent=primary_agent, monitor=monitor)
+        orchestrator = Orchestrator(scenario_id=scenario_id, agent=primary_agent, metric_service=metric_service)
     except ValueError as e:
         print(f"Error initializing Orchestrator: {e}")
         sys.exit(1)

@@ -2,6 +2,7 @@ import os
 import random
 import string
 from src.scenarios.tasks import data_pipeline
+from src.scenarios.tasks import vision_dataset
 
 def setup_drug_filter(base_path: str):
     """Creates the environment for the Drug Filter scenario."""
@@ -38,9 +39,14 @@ def setup_data_pipeline(base_path: str):
     """Creates the environment for the Data Pipeline scenario."""
     data_pipeline.setup_environment(base_path)
 
+def setup_vision_dataset(base_path: str):
+    """Creates the environment for the Vision Defect scenario."""
+    vision_dataset.setup_environment(base_path)
+
 SCENARIO_SETUP_MAP = {
     "drug_filter_baseline": setup_drug_filter,
     "drug_filter_shock": setup_drug_filter,
     "file_organizer_shock": setup_file_organizer,
-    "data_pipeline_shock": setup_data_pipeline
+    "data_pipeline_shock": setup_data_pipeline,
+    "vision_defect_shock": setup_vision_dataset
 }

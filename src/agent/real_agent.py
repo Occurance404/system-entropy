@@ -1,22 +1,36 @@
 import os
 import json
 import math
+import asyncio
 from typing import List, Dict, Any, Optional
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from src.agent.wrapper import AgentWrapper
 
 class OpenAICompatibleAgent(AgentWrapper):
     """
     Implementation for OpenAI-compatible APIs (including vLLM).
     Connects to a remote server to generate text and logprobs.
+    Includes Async Acceleration for Branching Probes.
     """
     
     def __init__(self, model_name: str, base_url: str = None, api_key: str = None, temperature: float = 0.7):
         super().__init__(model_name, temperature)
+        
+        base_url = base_url or os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
+        api_key = api_key or os.getenv("VLLM_API_KEY", "EMPTY")
+        
+        # Sync client for standard steps (to keep Orchestrator simple)
         self.client = OpenAI(
-            base_url=base_url or os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1"),
-            api_key=api_key or os.getenv("VLLM_API_KEY", "EMPTY")
+            base_url=base_url,
+            api_key=api_key
         )
+        
+        # Async client for parallel probing
+        self.async_client = AsyncOpenAI(
+            base_url=base_url,
+            api_key=api_key
+        )
+        
         # Define a clear system message to orient the agent as a task executor
         self.system_message = {
             "role": "system",
@@ -91,9 +105,8 @@ class OpenAICompatibleAgent(AgentWrapper):
 
     def get_next_action(self, history: List[Dict]) -> Dict[str, Any]:
         """
-        Fetches the next action from the LLM.
+        Fetches the next action from the LLM using the Synchronous Client.
         """
-        # Prepend the system message to the history
         messages = [self.system_message] + [{"role": msg["role"], "content": msg["content"]} for msg in history if msg["role"] in ["system", "user", "assistant"]]
         if not messages:
             messages = [{"role": "user", "content": "Begin the task."}]
@@ -137,40 +150,54 @@ class OpenAICompatibleAgent(AgentWrapper):
 
     def generate_multiple(self, history: List[Dict], n: int = 5) -> List[Dict[str, Any]]:
         """
-        Generates N divergent responses for Branching Probe.
-        Uses Sequential Branching (looping n times) to ensure compatibility 
-        with APIs that don't support n > 1 (like DeepSeek).
+        Generates N divergent responses for Branching Probe in PARALLEL.
+        Wraps async calls in a synchronous runner to maintain Protocol compatibility.
         """
-        # Prepend the system message to the history
+        return asyncio.run(self._generate_multiple_async(history, n))
+
+    async def _generate_multiple_async(self, history: List[Dict], n: int) -> List[Dict[str, Any]]:
+        """
+        Internal Async implementation of Branching Probe.
+        """
         messages = [self.system_message] + [{"role": msg["role"], "content": msg["content"]} for msg in history if msg["role"] in ["system", "user", "assistant"]]
         
-        branches = []
-        for i in range(n):
-            try:
-                # Call API n times sequentially
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=0.9, # High temp for divergence
-                    n=1, # Always 1 for compatibility
-                    logprobs=True,
-                    top_logprobs=1
-                )
-                
-                choice = response.choices[0]
-                content = choice.message.content
-                token_logprobs = []
-                if choice.logprobs and choice.logprobs.content:
-                    token_logprobs = [token.logprob for token in choice.logprobs.content]
-                
-                branches.append({
-                    "type": "thought",
-                    "content": content,
-                    "logprobs": token_logprobs
-                })
-            except Exception as e:
-                print(f"Error in branching probe iteration {i+1}/{n}: {e}")
-                # Continue to try getting other branches even if one fails
-                continue
-                
-        return branches
+        # Create N parallel tasks
+        tasks = [self._generate_one_async(messages, i, n) for i in range(n)]
+        
+        # Wait for all to complete
+        branches = await asyncio.gather(*tasks)
+        
+        # Filter out Nones (failed attempts)
+        valid_branches = [b for b in branches if b is not None]
+        
+        # If all failed, return empty list
+        return valid_branches
+
+    async def _generate_one_async(self, messages: List[Dict], index: int, total: int) -> Optional[Dict[str, Any]]:
+        """
+        Helper for a single async generation.
+        """
+        try:
+            response = await self.async_client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=0.9, # High temp for divergence
+                n=1, 
+                logprobs=True,
+                top_logprobs=1
+            )
+            
+            choice = response.choices[0]
+            content = choice.message.content
+            token_logprobs = []
+            if choice.logprobs and choice.logprobs.content:
+                token_logprobs = [token.logprob for token in choice.logprobs.content]
+            
+            return {
+                "type": "thought",
+                "content": content,
+                "logprobs": token_logprobs
+            }
+        except Exception as e:
+            print(f"Error in async probe {index+1}/{total}: {e}")
+            return None
