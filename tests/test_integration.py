@@ -12,10 +12,9 @@ class ScriptedAgent:
 
     def get_next_action(self, history):
         if self.step_idx < len(self.golden_path):
-            action = self.golden_path[self.step_idx]["agent_action"].copy()
-            # Fix for integration test schema mismatch
-            if "args" in action and "content" not in action:
-                 action["content"] = action["args"]
+            # Access Pydantic model fields directly, converting to dict for copy()
+            step_data = self.golden_path[self.step_idx]
+            action = step_data.agent_action.model_dump().copy()
             
             # Mock logprobs
             action["logprobs"] = [-0.1] * 10 
@@ -30,8 +29,7 @@ class TestIntegration(unittest.TestCase):
     def test_simulation_run(self):
         # Use the first scenario
         scenario = SCENARIOS[0] 
-        agent = ScriptedAgent(scenario["golden_path"])
-        monitor = StateMonitor()
+        agent = ScriptedAgent(scenario.golden_path)
         
         # Mock connector
         mock_connector = MagicMock()
@@ -39,17 +37,21 @@ class TestIntegration(unittest.TestCase):
         mock_connector.read_file.return_value = "Mock content"
         mock_connector.write_file.return_value = True
         
-        # Initialize Orchestrator with injected connector
+        # Mock metrics_monitor with a log_step method
+        mock_metrics_monitor = MagicMock()
+        mock_metrics_monitor.log_step.return_value = None # log_step typically doesn't return anything
+        
+        # Initialize Orchestrator with injected connector and mock metrics monitor
         orchestrator = Orchestrator(
-            scenario_id=scenario["id"], 
+            scenario_id=scenario.id, 
             agent=agent, 
-            monitor=monitor,
+            metrics_monitor=mock_metrics_monitor,
             connector=mock_connector
         )
         
         print("\nRunning Integration Test Steps:")
         # Run a few steps corresponding to the golden path
-        for i in range(len(scenario["golden_path"])):
+        for i in range(len(scenario.golden_path)):
             result = orchestrator.step()
             print(f"Step {i+1}: {result['event_type']}")
             
@@ -58,10 +60,10 @@ class TestIntegration(unittest.TestCase):
             self.assertIn("step_index", result)
             
             # Check IGE calculation (should be present after first tool use)
-            if i > 0 and scenario["golden_path"][i-1]["agent_action"]["type"] == "tool_use":
+            if i > 0 and scenario.golden_path[i-1].agent_action.type == "tool_use":
                 pass
                 
-        self.assertTrue(orchestrator.step_count >= len(scenario["golden_path"]))
+        self.assertTrue(orchestrator.step_count >= len(scenario.golden_path))
 
 if __name__ == "__main__":
     unittest.main()

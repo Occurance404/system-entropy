@@ -7,6 +7,7 @@ from src.orchestrator.engine import Orchestrator
 from src.monitor.probe import StateMonitor
 from src.monitor.terminal_bench_monitor import get_monitor
 from src.agent.mock_agent import ScriptedAgent
+from src.shared.constants import LOGS_DIR
 
 def run_simulation(scenario_id: str = "drug_filter_shock", max_steps: int = 10):
     print(f"--- Starting Simulation: {scenario_id} ---")
@@ -58,14 +59,14 @@ def run_simulation(scenario_id: str = "drug_filter_shock", max_steps: int = 10):
     # 4. Compute and Save Drift Summary
     print("\n--- Computing Drift Metrics ---")
     summary = orchestrator.compute_drift_summary()
-    summary_file = f"data/logs_terminal_bench/run_{run_id}_summary.json"
+    summary_file = os.path.join(LOGS_DIR, f"run_{run_id}_summary.json")
     with open(summary_file, "w") as f:
         json.dump(summary, f, indent=2)
     print(f"Summary saved to: {summary_file}")
     print(f"Max Drift: {summary['max_drift']:.4f}")
     print(f"Recovered at Step: {summary['recovered_at_step']}")
 
-    print(f"\n--- Simulation Complete. Logs in data/logs_terminal_bench/ ---")
+    print(f"\n--- Simulation Complete. Logs in {LOGS_DIR} ---")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -1,49 +1,85 @@
-# Entropic Dynamics of Large Language Models Under Non-Stationary Task Constraints
+# Entropic Stress-Test Framework
 
-## Abstract
-Current evaluations of Agentic Systems focus on Static Solvability. However, real-world deployment involves Non-Stationary Objectives. Anecdotal evidence suggests Agents exhibit "Cognitive Collapse" when forced to modify their own outputs. This research aims to move beyond "success rates" and mathematically quantify Inference-Time Entropic Collapse, correlating the rise in token-level entropy and code structural complexity with the failure to adapt to dynamic requirement injection.
+A research framework to study how LLM-based agents behave under non-stationary tasks. It couples a controllable orchestrator, branching probes (Semantic Collapse Ratio/SCR), and a Docker sandbox to reveal silent failure modes and trigger rescue handoffs.
 
-## System Architecture: The "Entropic Stress-Test" Framework v2.0
+## Quick Start
+- Requirements: Python 3.11+, `virtualenv`; Docker needed for TerminalBench sandbox runs.
+- Install:
+  ```bash
+  python -m venv .venv && source .venv/bin/activate
+  pip install -r requirements.txt
+  ```
+- Configure `.env` (example):
+  ```ini
+  VLLM_API_KEY=sk-...
+  VLLM_BASE_URL=https://api.deepseek.com/v1
+  VLLM_MODEL_NAME=deepseek-chat
+  RESCUE_API_KEY=sk-...        # optional
+  RESCUE_BASE_URL=https://api.openai.com/v1
+  RESCUE_MODEL_NAME=gpt-4      # optional
+  PROXY_AUTH_TOKEN=dev-secret  # for proxy routes
+  ```
 
-Incorporating insights from "Agentic Entropy-Balanced Policy Optimization" (AEPO).
+## Running Experiments
+- Baseline or Rescue run (with perturbations, optional handoff):
+  ```bash
+  python run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20            # baseline
+  python run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20 --enable_rescue
+  ```
+- Hard mode (no rescue, periodic probes):
+  ```bash
+  python run_hard_mode.py --scenario_id hard_coding_challenge --max_steps 20 --probe_interval 3
+  ```
+- Real simulation with a remote model (uses `.env`):
+  ```bash
+  python simulate_real.py --scenario_id drug_filter_shock --max_steps 10
+  ```
+- Smoke test (plumbing/logging sanity):
+  ```bash
+  python smoke_test.py
+  ```
+- Scale experiment (slow, aggregates logs):
+  ```bash
+  python run_scale_experiment.py --num_runs 5
+  ```
+- TerminalBench harness (requires Docker, proxy):
+  ```bash
+  ./run_tb_task.sh --task-id drug_filter_shock
+  ```
 
-### 1. High-Level Logic Flow
-1.  **Phase 1: Normal Operation:** Agent executes initial task. Monitor logs baseline entropy.
-2.  **Phase 2: The Perturbation:** Orchestrator injects a requirement change.
-3.  **Critical Measurement Point (Branching Probe):**
-    *   Orchestrator forces Agent to generate Top-5 responses.
-    *   Monitor calculates **Semantic Collapse Ratio (SCR)** based on divergence.
-4.  **Recovery Cycle:**
-    *   Agent continues execution on the "Best" path.
-    *   Monitor calculates **Information Gain Efficiency (IGE)** after tool use.
-    *   **Hysteresis Intervention:** If entropy > threshold for 3+ consecutive turns ("Persistent Panic"), the Orchestrator resets the context.
+Logs land under `data/logs_rescue/`, `data/logs_hard_mode/`, or `data/logs_terminal_bench/`; sandboxes live under `data/sandbox_<scenario>/`.
 
-### 2. Component Specifications
+## Core Concepts
+- **Orchestrator** (`src/orchestrator/engine.py`): injects perturbations, runs branching probes, tracks panic counters, and can switch to a rescue agent.
+- **Agents**: `OpenAICompatibleAgent` (tool-calling, async probes) and `ScriptedAgent` (mock). Tools: read/write file, run shell, execute Python, stub web search.
+- **Metrics** (`src/services/metrics.py`):
+  - Entropy (chosen-token surprisal), IGE `(H_pre - H_post)/token_cost` around tool calls.
+  - SCR (avg cosine distance of 5 probe branches via `all-MiniLM-L6-v2`; 0.0 if embeddings missing).
+  - RDI (cosine distance to scenario ground truth), compression ratio, cyclomatic complexity.
+- **Intervention logic**: entropy threshold 0.8 (or z-score >2), panic if 3 consecutive breaches; optional silent SCR probes via `probe_interval`.
+- **Proxy** (`src/llm_proxy.py`): FastAPI shim to the real model with optional shock injection; logs via `TerminalBenchMonitor`.
 
-#### A. The Orchestrator (The Controller)
-*   **Mode Switch:** Toggles between `Linear_Run` (temp=0.1) and `Branching_Probe` (temp=0.7, n=5).
-*   **Hysteresis Logic:** Only intervenes if "Panic Counter" >= 3.
+## Scenarios
+Defined in `src/scenarios/definitions.py` with setup ops in `src/scenarios/setup_ops.py`:
+- Drug filter (baseline/shock), File organizer shock, Data pipeline shock, Vision defect shock, Hard coding/analysis challenges.
 
-#### B. The State Monitor (The Calculator)
-Now computes Differential Metrics:
+## Repo Structure
+- `src/agent/` agents; `src/orchestrator/` control loop; `src/services/` metrics; `src/tools/` tool registry; `src/connectors/` Docker sandbox.
+- `run_*.py`, `simulate*.py`: experiment runners.
+- `docs/metrics.md`, `real.md`, `THESIS_*`, `FINAL_REPORT.md`: documentation/thesis material.
+- `data/`: sandboxes, logs, results (ignored in git; generated).
 
-*   **Metric 1: Information Gain Efficiency (IGE)**
-    *   *Purpose:* Detect "Thrashing" (working without learning).
-    *   *Formula:* $IGE = \frac{H_{pre\_tool} - H_{post\_tool}}{\text{Token Cost}}$
-    *   *Hypothesis:* Failing agents have IGE $\approx 0$.
+## Testing
+Run unit/integration tests:
+```bash
+pytest
+```
+Smoke test for logging:
+```bash
+python smoke_test.py
+```
 
-*   **Metric 2: Semantic Collapse Ratio (SCR)**
-    *   *Purpose:* Measure "Over-branching" (Confusion).
-    *   *Formula:* Average pairwise Cosine Distance of Top-5 generated thought embeddings.
-    *   *Hypothesis:* High SCR = Total Confusion/Collapse.
-
-*   **Metric 3: The Regressive Debt (RDI)**
-    *   *Purpose:* Did it break old tests?
-
-#### C. The Sandbox (Environment)
-*   **State Snapshotting:** Supports "Forking" for Branching Probes (measuring intent without executing side-effects 5 times).
-
-## Experiments
-1.  **Baseline (Linear):** Standard task execution.
-2.  **The Shock (Dynamic):** Injection of conflicting constraints.
-3.  **The Rescue (Model Handoff):** Switching models upon entropy spikes.
+## Notes
+- Generated artifacts (logs/results/sandboxes) are ignored via `.gitignore`.
+- Embedding model load failures degrade SCR/RDI to 0.0/None; check console for warnings.
+- For production-style runs, set `PROXY_AUTH_TOKEN` and start `src/llm_proxy.py` before agents.***

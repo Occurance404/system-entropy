@@ -1,0 +1,29 @@
+# Base image with Python 3.10 (stable for ML)
+FROM python:3.10-slim
+
+# System dependencies
+# libgl1-mesa-glx is needed for OpenCV
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Data Science & ML libraries
+# We pin versions to ensure reproducibility
+RUN pip install --no-cache-dir \
+    numpy==1.26.4 \
+    pandas==2.2.0 \
+    scikit-learn==1.4.0 \
+    torch==2.2.0 \
+    torchvision==0.17.0 \
+    opencv-python-headless==4.9.0.80 \
+    matplotlib==3.8.2 \
+    seaborn==0.13.2 \
+    pillow==10.2.0
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command
+CMD ["tail", "-f", "/dev/null"]

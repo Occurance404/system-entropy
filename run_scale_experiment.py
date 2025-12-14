@@ -5,8 +5,8 @@ import json
 import glob
 from datetime import datetime
 
-def run_scale_experiment(num_runs=50, output_csv="data/results/scale_experiment_results.csv"):
-    print(f"--- Starting Scale Experiment: {num_runs} runs ---")
+def run_scale_experiment(num_runs=5, output_csv="data/results/scale_experiment_results_v2.csv"):
+    print(f"--- Starting Scale Experiment (Slow Mode): {num_runs} runs ---")
     
     # 1. Setup Results File
     os.makedirs("data/results", exist_ok=True)
@@ -18,23 +18,21 @@ def run_scale_experiment(num_runs=50, output_csv="data/results/scale_experiment_
         
         # 2. Run the Shock Experiment
         # We use subprocess to run the bash script. 
-        # Ensure we capture stdout/stderr to avoid clutter, or let it print to monitor progress.
         try:
             # Construct a single bash command to activate venv and run the script
-            # This is the most robust way to ensure the venv is active for the subprocess.
+            # using run_rescue_experiment.py with rescue DISABLED (raw data)
             bash_command = (
                 f"source .venv/bin/activate && "
-                f"./run_shock_experiment.sh"
+                f"python run_rescue_experiment.py --scenario_id file_organizer_shock --max_steps 8" 
             )
             subprocess.run(["/bin/bash", "-c", bash_command], check=True)
         except subprocess.CalledProcessError as e:
             print(f"Run {run_i+1} failed: {e}")
-            continue
+            # Don't continue, try to sleep and recover
             
         # 3. Harvest Data from the Monitor Log
-        # The monitor writes to data/logs_terminal_bench/tb_monitor_YYYYMMDD_HHMMSS.jsonl
-        # We need to find the *latest* file created.
-        list_of_files = glob.glob('data/logs_terminal_bench/*.jsonl')
+        # The runner writes to data/logs_rescue/sim_baseline_file_organizer_shock_YYYYMMDD_HHMMSS.jsonl
+        list_of_files = glob.glob('data/logs_rescue/*.jsonl')
         if not list_of_files:
             print("Warning: No monitor logs found.")
             continue
@@ -47,28 +45,30 @@ def run_scale_experiment(num_runs=50, output_csv="data/results/scale_experiment_
             for line in f:
                 try:
                     entry = json.loads(line)
-                    # Extract metrics
-                    entropy = entry.get("entropy", 0.0)
-                    scr = entry.get("scr", 0.0)
+                    # Extract metrics from the nested dictionary
+                    metrics = entry.get("metrics", {})
+                    
+                    step_index = entry.get("step_index", 0)
+                    entropy = metrics.get("current_entropy")
+                    scr = metrics.get("scr")
+                    
+                    # Handle Nones for CSV safety
+                    if entropy is None: entropy = 0.0
                     if scr is None: scr = 0.0
                     
-                    # Determine if this step was shocked
-                    # We know shock hits at step 3 (from run_shock_experiment.sh)
-                    step_count += 1
-                    is_shocked = step_count >= 3
+                    # Determine if this step was shocked (Scenario defines shock at Step 3)
+                    is_shocked = step_index >= 3
                     
                     # Append to CSV
                     with open(output_csv, "a") as out_f:
-                        out_f.write(f"{run_i+1},{step_count},{entropy},{scr},{is_shocked}\n")
+                        out_f.write(f"{run_i+1},{step_index},{entropy},{scr},{is_shocked}\n")
                         
                 except json.JSONDecodeError:
                     continue
         
-        # 4. Cleanup (Optional - maybe keep logs for deep dive?)
-        # For now, we keep them.
-        
-        # Sleep briefly to allow ports to clear
-        time.sleep(2)
+        # 4. Rate Limit Cooldown
+        print("Sleeping for 45s to reset API Rate Limits...")
+        time.sleep(45)
 
     print(f"--- Scale Experiment Complete. Data saved to {output_csv} ---")
 

@@ -138,6 +138,10 @@ class TerminalBenchConnector:
             print(f"Connector: Blocked write to unsafe path '{path}'")
             return False
 
+        # Resolve absolute path to ensure consistency between mkdir and put_archive
+        if not path.startswith("/"):
+            path = os.path.join(self.cwd, path)
+
         print(f"Connector: Writing to file '{path}'...")
         try:
             # Create a tar archive in memory
@@ -153,10 +157,8 @@ class TerminalBenchConnector:
             
             # Determine the directory to put the file in
             dir_path = os.path.dirname(path)
-            if not dir_path:
-                dir_path = self.cwd
             
-            # Ensure the directory exists
+            # Ensure the directory exists (absolute path works regardless of CWD)
             self.execute_command(f"mkdir -p {dir_path}")
             
             self.container.put_archive(dir_path, tar_stream)

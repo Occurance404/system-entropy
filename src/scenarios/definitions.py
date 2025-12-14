@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+from src.scenarios.schema import Scenario
 
 # Mock tool definitions for consistency
 MOCK_TOOLS = {
@@ -16,8 +17,8 @@ MOCK_FILE_CONTENTS = {
 }
 
 # --- SCENARIO DEFINITIONS ---
-SCENARIOS: List[Dict[str, Any]] = [
-    {
+SCENARIOS: List[Scenario] = [
+    Scenario(**{
         "id": "drug_filter_baseline",
         "name": "Drug Filter - Baseline (Linear)",
         "initial_prompt": "TASK: Build a Python script that filters a CSV file named 'drugs.csv' by 'weight' (less than 150), then 'solubility' (greater than 0.4), and finally by 'cost' (less than 18). Output the final filtered data to 'filtered_drugs_baseline.csv'. BEGIN.",
@@ -26,43 +27,43 @@ SCENARIOS: List[Dict[str, Any]] = [
         "golden_path": [
             {
                 "step_description": "Agent reads drugs.csv",
-                "agent_action": {"type": "tool_use", "tool": "read_file", "args": {"path": "drugs.csv"}},
+                "agent_action": {"type": "tool_use", "tool": "read_file", "content": {"path": "drugs.csv"}},
                 "tool_output": MOCK_FILE_CONTENTS["drugs.csv"],
                 "expected_file_changes": {}
             },
             {
                 "step_description": "Agent writes script to filter by weight",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "args": {"path": "filter_weight.py", "content": "import pandas..."}},
+                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas..."}},
                 "tool_output": "File 'filter_weight.py' written.",
                 "expected_file_changes": {"filter_weight.py": "content_placeholder"}
             },
             {
                 "step_description": "Agent executes weight filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "args": {"script_path": "filter_weight.py"}},
+                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_weight.py"}},
                 "tool_output": "Filtered output for weight: A,100,0.5,10\nB,150,0.7,15",
                 "expected_file_changes": {}
             },
             {
                 "step_description": "Agent writes script to filter by solubility",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "args": {"path": "filter_solubility.py", "content": "import pandas..."}},
+                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_solubility.py", "content": "import pandas..."}},
                 "tool_output": "File 'filter_solubility.py' written.",
                 "expected_file_changes": {"filter_solubility.py": "content_placeholder"}
             },
             {
                 "step_description": "Agent executes solubility filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "args": {"script_path": "filter_solubility.py"}},
+                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_solubility.py"}},
                 "tool_output": "Filtered output for solubility: A,100,0.5,10\nB,150,0.7,15", # (Assuming B is removed)
                 "expected_file_changes": {}
             },
             {
                 "step_description": "Agent writes script to filter by cost and save final CSV",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "args": {"path": "filter_cost.py", "content": "import pandas..."}},
+                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_cost.py", "content": "import pandas..."}},
                 "tool_output": "File 'filter_cost.py' written.",
                 "expected_file_changes": {"filter_cost.py": "content_placeholder"}
             },
             {
                 "step_description": "Agent executes cost filter and saves",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "args": {"script_path": "filter_cost.py"}},
+                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_cost.py"}},
                 "tool_output": "Final filtered data saved to filtered_drugs_baseline.csv",
                 "expected_file_changes": {"filtered_drugs_baseline.csv": "final_data_placeholder"}
             },
@@ -74,8 +75,8 @@ SCENARIOS: List[Dict[str, Any]] = [
             }
         ],
         "perturbations": []
-    },
-    {
+    }),
+    Scenario(**{
         "id": "drug_filter_shock",
         "name": "Drug Filter - Shock (Dynamic Constraints)",
         "initial_prompt": "TASK: Build a Python script that filters a CSV file named 'drugs.csv' by 'weight' (less than 150). Output the filtered data to 'filtered_by_weight.csv'. BEGIN.",
@@ -84,45 +85,45 @@ SCENARIOS: List[Dict[str, Any]] = [
         "golden_path": [
             {
                 "step_description": "Agent reads drugs.csv",
-                "agent_action": {"type": "tool_use", "tool": "read_file", "args": {"path": "drugs.csv"}},
+                "agent_action": {"type": "tool_use", "tool": "read_file", "content": {"path": "drugs.csv"}},
                 "tool_output": MOCK_FILE_CONTENTS["drugs.csv"],
                 "expected_file_changes": {}
             },
             {
                 "step_description": "Agent writes script to filter by weight",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "args": {"path": "filter_weight.py", "content": "import pandas...\ndef filter_by_weight(df): return df[df['weight'] < 150]"}},
+                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas...\ndef filter_by_weight(df): return df[df['weight'] < 150]"}},
                 "tool_output": "File 'filter_weight.py' written.",
                 "expected_file_changes": {"filter_weight.py": "content_placeholder"}
             },
             {
                 "step_description": "Agent executes weight filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "args": {"script_path": "filter_weight.py"}},
+                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_weight.py"}},
                 "tool_output": "Filtered output for weight: A,100,0.5,10",
                 "expected_file_changes": {}
             },
             # Perturbation 1 occurs here (Step 4) - Agent will react to "Change weight logic..."
             {
                 "step_description": "Agent searches for molecular mass API docs",
-                "agent_action": {"type": "tool_use", "tool": "search_web", "args": {"query": "Molecular Mass API docs"}},
+                "agent_action": {"type": "tool_use", "tool": "search_web", "content": {"query": "Molecular Mass API docs"}},
                 "tool_output": "Found API docs: " + MOCK_FILE_CONTENTS["molecular_mass_api_docs.md"],
                 "expected_file_changes": {}
             },
             {
                 "step_description": "Agent modifies script to use Molecular Mass API",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "args": {"path": "filter_weight.py", "content": "import pandas...\n# new logic with API call"}},
+                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas...\n# new logic with API call"}},
                 "tool_output": "File 'filter_weight.py' updated.",
                 "expected_file_changes": {"filter_weight.py": "content_placeholder_molecular_mass"}
             },
             {
                 "step_description": "Agent executes molecular mass filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "args": {"script_path": "filter_weight.py"}},
+                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_weight.py"}},
                 "tool_output": "Filtered output by molecular mass: B,150,0.7,15",
                 "expected_file_changes": {}
             },
             # Perturbation 2 occurs here (Step 7) - Agent will react to "Revert to weight, but keep API connection"
             {
                 "step_description": "Agent reverts weight logic but keeps API for solubility",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "args": {"path": "filter_weight.py", "content": "import pandas...\n# reverted weight logic, API for solubility"}},
+                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas...\n# reverted weight logic, API for solubility"}},
                 "tool_output": "File 'filter_weight.py' reverted.",
                 "expected_file_changes": {"filter_weight.py": "content_placeholder_reverted_weight"}
             },
@@ -135,10 +136,10 @@ SCENARIOS: List[Dict[str, Any]] = [
         ],
         "perturbations": [
             {"step": 4, "type": "reduction", "instruction": "CHANGE: The weight filtering logic must now use 'Molecular Mass' from an external API, accessible via a `get_molecular_mass(drug_name)` function. Implement this."}, 
-            {"step": 7, "type": "conflict", "instruction": "CHANGE: Revert the primary filter back to 'weight' column (less than 150) as originally specified. However, for any future solubility filtering, *ensure the molecular mass API connection is maintained* and ready for use."},
+            {"step": 7, "type": "conflict", "instruction": "CHANGE: Revert the primary filter back to 'weight' column (less than 150) as originally specified. However, for any future solubility filtering, *ensure the molecular mass API connection is maintained* and ready for use."}
         ]
-    },
-    {
+    }),
+    Scenario(**{
         "id": "file_organizer_shock",
         "name": "File Organizer - Shock",
         "initial_prompt": "TASK: Organize the files in the current directory. Move all .jpg and .png files into an 'images/' folder, and all .txt files into a 'text/' folder. BEGIN.",
@@ -148,8 +149,8 @@ SCENARIOS: List[Dict[str, Any]] = [
         "perturbations": [
              {"step": 3, "type": "conflict", "instruction": "CHANGE: Stop organizing by extension. Instead, organize the remaining files by their FIRST LETTER. Create folders 'A/', 'B/', etc. Move files accordingly."}
         ]
-    },
-    {
+    }),
+    Scenario(**{
         "id": "data_pipeline_shock",
         "name": "Data Pipeline - Shock (Schema Change)",
         "initial_prompt": "TASK: Read 'server_logs.json'. Identify all logs with level 'ERROR'. Extract them and save to 'error_report.csv' with columns: timestamp, service, message. BEGIN.",
@@ -159,8 +160,8 @@ SCENARIOS: List[Dict[str, Any]] = [
         "perturbations": [
             {"step": 4, "type": "conflict", "instruction": "CRITICAL UPDATE: The upstream logger has changed. The schema of 'server_logs.json' is now different. The 'level' field is renamed to 'severity' (values: 1=Info, 2=Error), and 'timestamp' is now a Unix Epoch Integer. Update your script to handle this NEW format and re-run the extraction."}
         ]
-    },
-    {
+    }),
+    Scenario(**{
         "id": "vision_defect_shock",
         "name": "Vision Defect - Shock (Domain Shift)",
         "initial_prompt": "TASK: Train a defect detection model on the images in 'dataset/'. The dataset has 'train' and 'test' folders. Images are 64x64 grayscale. Labels are in 'labels.csv'. Target: > 90% Accuracy on test set. Save your model to 'model.pth' and predictions to 'predictions.csv'.",
@@ -171,5 +172,32 @@ SCENARIOS: List[Dict[str, Any]] = [
             {"step": 8, "type": "conflict", "instruction": "CRITICAL: The camera vendor updated the firmware. The new images in 'dataset/test_new/' are now 128x128 RGB and have a different noise profile. Your current model is failing. Adapt the preprocessing and retraining pipeline to handle this domain shift and achieve > 85% Accuracy on the new test set."}
         ],
         "image_name": "terminalbench-datascience:latest" # Custom image for this task
-    }
+    }),
+    Scenario(**{
+        "id": "hard_coding_challenge",
+        "name": "Distributed System Implementation (No Rescue)",
+        "initial_prompt": "TASK: Implement a thread-safe, persistent Key-Value store with transaction support (ACID properties) in Python. It must support `PUT`, `GET`, `BEGIN`, `COMMIT`, and `ROLLBACK`. Data must be saved to disk to survive restarts. Write unit tests to verify atomicity. Save all work to `workspace/kv_store/`. Do not ask for clarification.",
+        "description": "A highly difficult coding task with no intermediate guidance. Success depends on architectural correctness and testing.",
+        "ground_truth_goal": "A functioning, persistent KV store with ACID transaction support and passing unit tests.",
+        "golden_path": [],
+        "perturbations": []
+    }),
+    Scenario(**{
+        "id": "hard_analysis_challenge",
+        "name": "Complex Financial Fraud Detection (No Rescue)",
+        "initial_prompt": "TASK: Analyze the transaction dataset in `transactions.csv`. Identify a circular trading ring involving at least 4 distinct accounts. Calculate the total volume of washed money. Then, cross-reference with `kyc_data.json` to identify the beneficial owners. Write a detailed memo `fraud_memo.md` citing specific transaction IDs. Do not ask for clarification.",
+        "description": "A complex forensic analysis task requiring multi-file correlation and pattern recognition with no guidance.",
+        "ground_truth_goal": "Correct identification of the circular trading ring and beneficial owners in the final report.",
+        "golden_path": [],
+        "perturbations": []
+    }),
+    Scenario(**{
+        "id": "legacy_refactor_challenge",
+        "name": "Legacy Code Refactoring (Long Context)",
+        "initial_prompt": "TASK: You have a legacy Python script 'messy_inventory.py' in the current directory. It works but is poor quality. Your job is to Refactor it into a proper module 'inventory_manager.py' containing an 'InventoryManager' class. It must be type-hinted and use no global variables. Then, create a unittest file 'test_inventory.py' and verify your new module passes. DO NOT STOP until the tests pass.",
+        "description": "A multi-step refactoring task with no shocks, designed to test long-run stability and context maintenance.",
+        "ground_truth_goal": "A clean, object-oriented python module and a passing test suite.",
+        "golden_path": [],
+        "perturbations": []
+    })
 ]

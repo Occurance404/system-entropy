@@ -43,10 +43,53 @@ def setup_vision_dataset(base_path: str):
     """Creates the environment for the Vision Defect scenario."""
     vision_dataset.setup_environment(base_path)
 
+def setup_legacy_refactor(base_path: str):
+    """Creates the environment for the Legacy Refactoring challenge."""
+    os.makedirs(base_path, exist_ok=True)
+    
+    # 1. Create the CSV data
+    csv_content = "name,price,quantity\nWidget_A,10.50,100\nWidget_B,5.00,3\nWidget_C,20.00,50\nWidget_D,2.50,0\nWidget_E,15.00,10"
+    with open(os.path.join(base_path, "inventory.csv"), "w") as f:
+        f.write(csv_content)
+
+    # 2. Create the messy python script
+    script_content = """import csv
+
+data = []
+file = "inventory.csv"
+
+def load():
+    global data
+    with open(file, 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            data.append(row)
+
+def process():
+    global data
+    total = 0
+    for row in data:
+        if row[0] == 'name': continue
+        p = float(row[1])
+        q = int(row[2])
+        total += p * q
+        if q < 5:
+            print("WARNING: Low stock for " + row[0])
+    print("Total value: " + str(total))
+
+load()
+process()
+"""
+    with open(os.path.join(base_path, "messy_inventory.py"), "w") as f:
+        f.write(script_content)
+    
+    print(f"Setup: Created legacy environment in {base_path}")
+
 SCENARIO_SETUP_MAP = {
     "drug_filter_baseline": setup_drug_filter,
     "drug_filter_shock": setup_drug_filter,
     "file_organizer_shock": setup_file_organizer,
     "data_pipeline_shock": setup_data_pipeline,
-    "vision_defect_shock": setup_vision_dataset
+    "vision_defect_shock": setup_vision_dataset,
+    "legacy_refactor_challenge": setup_legacy_refactor
 }

@@ -25,7 +25,9 @@ class Orchestrator:
                  entropy_std: float = None,
                  connector: Any = None,
                  run_id: str = None,
-                 metrics_monitor: Any = None):
+                 metrics_monitor: Any = None,
+                 enable_intervention: bool = True,
+                 probe_interval: int = 0):
         
         self.scenario_id = scenario_id
         self.scenario = self._load_scenario(scenario_id)
@@ -45,6 +47,8 @@ class Orchestrator:
         self.agent = agent
         self.run_id = run_id or str(uuid.uuid4())
         self.metrics_monitor = metrics_monitor
+        self.enable_intervention = enable_intervention
+        self.probe_interval = probe_interval
         
         # Dependency Injection: Metric Service
         if metric_service:
@@ -84,6 +88,10 @@ class Orchestrator:
         
         # Determine Ground Truth for RDI (Text only, embedding happens in service)
         self.ground_truth_text = self.scenario.get("ground_truth_goal") or self.scenario.get("initial_prompt", "")
+
+        # Initialize History with Prompt
+        if self.scenario.get("initial_prompt"):
+             self.history.append({"role": "user", "content": self.scenario.get("initial_prompt")})
         
     def switch_agent(self, new_agent: AgentProtocol):
         """Swaps the current agent."""
@@ -93,8 +101,8 @@ class Orchestrator:
 
     def _load_scenario(self, scenario_id: str) -> Optional[Dict[str, Any]]:
         for s in SCENARIOS:
-            if s["id"] == scenario_id:
-                return s
+            if s.id == scenario_id:
+                return s.model_dump()
         return None
 
     def compute_drift_summary(self) -> Dict[str, Any]:
@@ -139,6 +147,25 @@ class Orchestrator:
             "timestamp": datetime.now().isoformat()
         }
 
+        # 1. Check for Periodic SCR Probe (Silent)
+        if self.probe_interval > 0 and self.step_count % self.probe_interval == 0:
+            # Only probe if no perturbation is about to happen (priority to perturbation)
+            if not self._check_perturbation_triggers():
+                 probe_results = self._run_branching_probe(perturbation_instruction=None)
+                 step_metrics["scr"] = probe_results["scr"]
+                 if self.metrics_monitor:
+                     self.metrics_monitor.log_step(
+                        run_id=self.run_id,
+                        scenario_id=self.scenario_id,
+                        model_name=step_metrics["model"],
+                        step_index=self.step_count,
+                        event_type="periodic_probe",
+                        prompt="<silent_probe>",
+                        scr=step_metrics["scr"],
+                        panic_counter=self.panic_counter
+                     )
+
+        # 2. Check for Perturbations (Scenario-driven)
         perturbation_instruction = self._check_perturbation_triggers()
         if perturbation_instruction:
             self.recovered_at_step = None
@@ -191,7 +218,7 @@ class Orchestrator:
         
         # Intervention Check
         if self._check_panic(current_entropy):
-            step_metrics["event_type"] = "intervention"
+            step_metrics["event_type"] = "panic_detected" # Log it even if we don't intervene
             step_metrics["panic_counter"] = self.panic_counter
             self.recovered_at_step = None
             self.stability_counter = 0
@@ -202,14 +229,16 @@ class Orchestrator:
                      scenario_id=self.scenario_id,
                      model_name=step_metrics["model"],
                      step_index=self.step_count,
-                     event_type="intervention",
+                     event_type="panic_detected",
                      current_entropy=current_entropy,
                      panic_counter=self.panic_counter,
                      rdi=step_metrics["rdi"]
                 )
-                
-            self.intervene()
-            return {**step_metrics, **{"type": "intervention", "reason": "persistent_panic", "step": self.step_count}}
+            
+            if self.enable_intervention:
+                step_metrics["event_type"] = "intervention"
+                self.intervene()
+                return {**step_metrics, **{"type": "intervention", "reason": "persistent_panic", "step": self.step_count}}
         
         step_metrics["panic_counter"] = self.panic_counter
         
@@ -254,6 +283,9 @@ class Orchestrator:
         # Logging
         if self.metrics_monitor:
             def branching_wrapper():
+                 # Only probe if SCR wasn't already calculated this step
+                 if step_metrics["scr"] is not None:
+                     return [] 
                  branches = self.agent.generate_multiple(self.history, n=5)
                  return [b.get("content", "") for b in branches]
 
@@ -282,11 +314,17 @@ class Orchestrator:
         else:
              return {**step_metrics, **{"type": "unknown_action"}}
 
-    def _run_branching_probe(self, perturbation_instruction: str) -> Dict:
+    def _run_branching_probe(self, perturbation_instruction: Optional[str] = None) -> Dict:
         """
         Executes the Branching Probe via Agent and calculates SCR via Service.
+        If perturbation_instruction is None, probes the current state silently.
         """
-        probe_history = self.history + [{"role": "user", "content": perturbation_instruction}]
+        if perturbation_instruction:
+            probe_history = self.history + [{"role": "user", "content": perturbation_instruction}]
+        else:
+            # Silent probe: Branch from current history
+            probe_history = list(self.history)
+
         branches = self.agent.generate_multiple(probe_history, n=5)
         branch_texts = [b.get("content", "") for b in branches]
         

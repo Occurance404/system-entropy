@@ -4,6 +4,7 @@ import math
 import asyncio
 from typing import List, Dict, Any, Optional
 from openai import OpenAI, AsyncOpenAI
+from json import JSONDecodeError
 from src.agent.wrapper import AgentWrapper
 
 class OpenAICompatibleAgent(AgentWrapper):
@@ -107,7 +108,17 @@ class OpenAICompatibleAgent(AgentWrapper):
         """
         Fetches the next action from the LLM using the Synchronous Client.
         """
-        messages = [self.system_message] + [{"role": msg["role"], "content": msg["content"]} for msg in history if msg["role"] in ["system", "user", "assistant"]]
+        messages = [self.system_message]
+        for msg in history:
+            role = msg["role"]
+            content = msg["content"]
+            if role == "tool_output":
+                role = "user" # Map tool output to user for visibility
+                content = f"Tool Output: {content}"
+            
+            if role in ["system", "user", "assistant"]:
+                messages.append({"role": role, "content": content})
+
         if not messages:
             messages = [{"role": "user", "content": "Begin the task."}]
 
@@ -131,10 +142,19 @@ class OpenAICompatibleAgent(AgentWrapper):
 
             if message.tool_calls:
                 tool_call = message.tool_calls[0]
+                try:
+                    tool_args = json.loads(tool_call.function.arguments)
+                except JSONDecodeError as e:
+                    print(f"JSONDecodeError when parsing tool arguments: {e}. Raw arguments: {tool_call.function.arguments}")
+                    return {
+                        "type": "llm_reply",
+                        "content": f"Error: Failed to parse tool arguments as JSON. Malformed JSON: {tool_call.function.arguments[:100]}...",
+                        "logprobs": [0.0] # Indicate very low confidence for this error
+                    }
                 return {
                     "type": "tool_use",
                     "tool": tool_call.function.name,
-                    "content": json.loads(tool_call.function.arguments),
+                    "content": tool_args,
                     "logprobs": token_logprobs
                 }
             else:
@@ -159,7 +179,16 @@ class OpenAICompatibleAgent(AgentWrapper):
         """
         Internal Async implementation of Branching Probe.
         """
-        messages = [self.system_message] + [{"role": msg["role"], "content": msg["content"]} for msg in history if msg["role"] in ["system", "user", "assistant"]]
+        messages = [self.system_message]
+        for msg in history:
+            role = msg["role"]
+            content = msg["content"]
+            if role == "tool_output":
+                role = "user" 
+                content = f"Tool Output: {content}"
+            
+            if role in ["system", "user", "assistant"]:
+                messages.append({"role": role, "content": content})
         
         # Create N parallel tasks
         tasks = [self._generate_one_async(messages, i, n) for i in range(n)]

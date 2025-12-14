@@ -7,11 +7,11 @@ from sentence_transformers import SentenceTransformer
 from scipy.spatial.distance import cosine
 import numpy as np
 
-from src.shared.constants import LOG_SCHEMA
+from src.shared.constants import LOG_SCHEMA, LOGS_DIR
 
 class TerminalBenchMonitor:
     def __init__(self):
-        self.log_file = f"data/logs_terminal_bench/tb_monitor_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl"
+        self.log_file = os.path.join(LOGS_DIR, f"tb_monitor_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl")
         os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
         
         # Load embedding model for SCR (Semantic Collapse Ratio)

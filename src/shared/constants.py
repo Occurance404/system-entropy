@@ -1,3 +1,10 @@
+import os
+
+# Directory Paths
+DATA_DIR = "data"
+LOGS_DIR = os.path.join(DATA_DIR, "logs_terminal_bench")
+RESULTS_DIR = os.path.join(DATA_DIR, "results")
+
 # Shared logging fields
 LOG_SCHEMA = [
     "run_id",

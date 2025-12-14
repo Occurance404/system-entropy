@@ -5,12 +5,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import argparse
 
-def load_latest_log(log_dir="data/logs_rescue"):
+def load_latest_log(log_dir):
     # Find the latest log file
     list_of_files = glob.glob(f'{log_dir}/*.jsonl')
     if not list_of_files:
-        print("No log files found.")
-        return None
+        print(f"No log files found in {log_dir}")
+        return None, None
     latest_file = max(list_of_files, key=os.path.getctime)
     print(f"Loading log file: {latest_file}")
     
@@ -22,7 +22,7 @@ def load_latest_log(log_dir="data/logs_rescue"):
             if "metrics" in entry and isinstance(entry["metrics"], dict):
                 entry.update(entry["metrics"])
             data.append(entry)
-    return pd.DataFrame(data)
+    return pd.DataFrame(data), latest_file
 
 def plot_metrics(df, output_path="data/results/experiment_summary.png"):
     if df is None or df.empty:
@@ -30,11 +30,19 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
         return
 
     # Ensure all relevant columns exist, fill missing with NaN for plotting clarity
+    if 'current_entropy' not in df.columns: df['current_entropy'] = 0.0
     df['current_entropy'] = df['current_entropy'].fillna(method='ffill').fillna(method='bfill') # Fill forward/backward for continuous plot
-    df['scr'] = df['scr'].fillna(0) # SCR only exists at perturbation, fill others with 0
-    df['ige'] = df['ige'].fillna(0) # IGE only exists at tool_execution, fill others with 0
-    df['cbf'] = df['cbf'].fillna(0) # CBF only exists at code writing, fill others with 0
-    df['rdi'] = df['rdi'].fillna(0) # RDI only exists at code execution, fill others with 0
+    
+    if 'scr' not in df.columns: df['scr'] = 0.0
+    if 'ige' not in df.columns: df['ige'] = 0.0
+    if 'cbf' not in df.columns: df['cbf'] = 0.0
+    if 'rdi' not in df.columns: df['rdi'] = 0.0
+    if 'panic_counter' not in df.columns:
+         # Try to extract from orchestrator_state if column missing
+         if 'orchestrator_state' in df.columns:
+             df['panic_counter'] = df['orchestrator_state'].apply(lambda x: x.get('panic_counter', 0) if isinstance(x, dict) else 0)
+         else:
+             df['panic_counter'] = 0
 
     steps = df['step_index']
     
@@ -48,22 +56,37 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
     axes[0].legend()
 
     # Plot 2: Panic Counter
-    axes[1].plot(steps, [s['panic_counter'] for s in df['orchestrator_state']], marker='o', linestyle='-', color='orange', label='Panic Counter')
+    axes[1].plot(steps, df['panic_counter'], marker='o', linestyle='-', color='orange', label='Panic Counter')
     axes[1].set_ylabel('Panic Level')
     axes[1].grid(True, alpha=0.3)
     axes[1].legend()
 
     # Plot 3: Semantic Collapse Ratio (SCR)
-    scr_data = df[df['event_type'] == 'perturbation_triggered']
-    if not scr_data.empty:
-        axes[2].bar(scr_data['step_index'], scr_data['scr'], color='red', width=0.5, label='SCR (Collapse)')
-        for i, row in scr_data.iterrows():
-            axes[2].text(row['step_index'], row['scr'] + 0.01, f"{row['scr']:.2f}", ha='center')
+    # Plot whenever SCR is present and > 0, regardless of event type
+    if 'scr' in df.columns:
+        scr_data = df[df['scr'] > 0]
+        
+        if not scr_data.empty:
+            # Differentiate colors: Red for shocks, Blue for silent probes (attached to other events)
+            colors = ['red' if et == 'perturbation_triggered' else 'blue' for et in scr_data['event_type']]
+            
+            axes[2].bar(scr_data['step_index'], scr_data['scr'], color=colors, width=0.5)
+            
+            # Add legend entries manually
+            from matplotlib.patches import Patch
+            legend_elements = [
+                Patch(facecolor='red', label='SCR (Shock)'),
+                Patch(facecolor='blue', label='SCR (Silent Probe)')
+            ]
+            axes[2].legend(handles=legend_elements)
+
+            for i, row in scr_data.iterrows():
+                axes[2].text(row['step_index'], row['scr'] + 0.01, f"{row['scr']:.2f}", ha='center', fontsize=8)
+                
     axes[2].set_ylabel('SCR Score')
-    axes[2].set_title('Semantic Collapse Ratio (at Perturbations)')
+    axes[2].set_title('Semantic Collapse Ratio (Shock vs. Silent)')
     axes[2].set_ylim(0, 1.0) # SCR is 0-1
     axes[2].grid(True, alpha=0.3)
-    axes[2].legend()
 
     # Plot 4: Information Gain Efficiency (IGE)
     ige_data = df[df['event_type'] == 'tool_execution']
@@ -119,20 +142,28 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Visualize results from the Entropic Stress-Test Simulation.")
-    parser.add_argument("--log_file", type=str, help="Specific log file to visualize. If not provided, the latest will be loaded.")
+    parser.add_argument("--log_file", type=str, help="Specific log file to visualize.")
+    parser.add_argument("--log_dir", type=str, default="data/logs_rescue", help="Directory to search for latest log if file not specified.")
     args = parser.parse_args()
 
     if args.log_file:
+        log_filename = args.log_file
         data = []
         with open(args.log_file, 'r') as f:
             for line in f:
                 entry = json.loads(line)
-                # Flatten metrics if present
                 if "metrics" in entry and isinstance(entry["metrics"], dict):
                     entry.update(entry["metrics"])
                 data.append(entry)
         df = pd.DataFrame(data)
     else:
-        df = load_latest_log()
-        
-    plot_metrics(df)
+        df, log_filename = load_latest_log(args.log_dir)
+    
+    if df is not None:
+        # Generate a unique output filename based on the log file
+        base_name = os.path.basename(log_filename)
+        # Remove extension
+        base_name = os.path.splitext(base_name)[0]
+        output_plot = f"data/results/summary_{base_name}.png"
+            
+        plot_metrics(df, output_path=output_plot)

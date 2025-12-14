@@ -8,7 +8,10 @@ def load_log(filepath):
     data = []
     with open(filepath, 'r') as f:
         for line in f:
-            data.append(json.loads(line))
+            entry = json.loads(line)
+            if "metrics" in entry and isinstance(entry["metrics"], dict):
+                entry.update(entry["metrics"])
+            data.append(entry)
     return pd.DataFrame(data)
 
 def plot_comparison(shock_log, baseline_log, output_path="data/results/entropy_comparison.png"):
