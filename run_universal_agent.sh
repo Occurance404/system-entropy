@@ -33,6 +33,8 @@ if [ -z "$AGENT_CMD" ]; then
     exit 1
 fi
 
+export TB_TASK_ID="$TASK_ID"
+
 # 2. Start LLM Proxy (The Heart Rate Monitor)
 PROXY_LOG="proxy_universal.log"
 echo "[1/3] Starting LLM Proxy..."
@@ -56,8 +58,7 @@ echo "      Connecting Agent to Proxy..."
 
 # Export Proxy Config for the Agent
 export OPENAI_API_BASE="http://localhost:8000/v1"
-export OPENAI_API_KEY="${VLLM_API_KEY}" # Pass real key to proxy
-export TB_TASK_ID="$TASK_ID"
+export OPENAI_API_KEY="${PROXY_AUTH_TOKEN:-dev-secret}"
 
 # Add venv python to PATH for agent command
 # This is usually for convenience, but for eval'ed commands, being explicit is safer.

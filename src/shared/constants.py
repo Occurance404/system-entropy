@@ -4,6 +4,7 @@ import os
 DATA_DIR = "data"
 LOGS_DIR = os.path.join(DATA_DIR, "logs_terminal_bench")
 RESULTS_DIR = os.path.join(DATA_DIR, "results")
+RUN_ARTIFACTS_DIR = os.path.join(DATA_DIR, "run_artifacts")
 
 # Shared logging fields
 LOG_SCHEMA = [
@@ -20,6 +21,13 @@ LOG_SCHEMA = [
     "panic_counter",
     "tool",
     "compression_ratio",
+    "task_complete",
+    "validation_passed",
+    "validation_score",
+    "validation_details",
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
     "timestamp"
 ]
 

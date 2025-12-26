@@ -1,9 +1,13 @@
 import os
 import uvicorn
 import json
+import math
 import asyncio
 import time
+import uuid
+from collections import defaultdict
 from datetime import datetime
+from threading import Lock
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, Header
 from fastapi.responses import JSONResponse
@@ -51,6 +55,10 @@ app = FastAPI(title="LLM Proxy with Metric Injection")
 monitor = get_monitor()
 config_store = DynamicConfig()
 rate_limiter = SimpleRateLimiter(max_requests=100, window_seconds=60) # 100 RPM default
+PROXY_RUN_ID = os.getenv("TB_RUN_ID") or str(uuid.uuid4())
+CHEAP_MODE = (os.getenv("CHEAP_MODE") or "").strip().lower() in ("1", "true", "yes", "on")
+PROXY_SCR_MODE = (os.getenv("PROXY_SCR_MODE") or ("off" if CHEAP_MODE else "shock")).strip().lower()
+PROXY_REQUEST_LOGPROBS = (os.getenv("PROXY_REQUEST_LOGPROBS") or "auto").strip().lower()
 
 # Load real API config from .env
 config = dotenv_values(".env")
@@ -72,10 +80,38 @@ except Exception as e:
     print(f"ERROR: Could not initialize OpenAI client in proxy: {e}")
     openai_client = None
 
-CURRENT_STEP = 0
+_STEP_LOCK = Lock()
+_STEP_BY_RUN_ID: Dict[str, int] = defaultdict(int)
+_LOGPROBS_LOCK = Lock()
+_LOGPROBS_SUPPORTED: Optional[bool] = None
+
+
+def _next_step_index(run_id: str) -> int:
+    with _STEP_LOCK:
+        _STEP_BY_RUN_ID[run_id] += 1
+        return _STEP_BY_RUN_ID[run_id]
 
 print(f"Proxy configured for real LLM: {REAL_VLLM_MODEL_NAME} at {REAL_VLLM_BASE_URL}")
 print(f"Initial Shock Config: {config_store.to_dict()}")
+print(f"Proxy Run ID: {PROXY_RUN_ID}")
+print(f"Proxy SCR Mode: {PROXY_SCR_MODE}")
+print(f"Proxy Logprobs Mode: {PROXY_REQUEST_LOGPROBS}")
+
+
+def _should_request_logprobs() -> bool:
+    mode = (PROXY_REQUEST_LOGPROBS or "auto").strip().lower()
+    if mode in ("0", "false", "no", "off"):
+        return False
+    if mode in ("1", "true", "yes", "on", "force"):
+        return True
+    # auto
+    with _LOGPROBS_LOCK:
+        return _LOGPROBS_SUPPORTED is not False
+
+
+def _looks_like_logprobs_unsupported(error: Exception) -> bool:
+    msg = str(error).lower()
+    return "logprobs" in msg or "top_logprobs" in msg
 
 # --- Security Dependencies ---
 
@@ -103,8 +139,6 @@ async def update_config(request: Request, authorized: bool = Depends(verify_auth
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request, authorized: bool = Depends(verify_auth)):
-    global CURRENT_STEP
-    
     # Rate Limiting
     if not rate_limiter.check_limit():
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
@@ -115,14 +149,25 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
         # Extract relevant fields
         model = req_body.get("model", REAL_VLLM_MODEL_NAME)
         messages = req_body.get("messages", [])
+
+        scenario_id = request.headers.get("x-task-id") or os.getenv("TB_TASK_ID")
+        metadata = req_body.get("metadata")
+        if not scenario_id and isinstance(metadata, dict):
+            scenario_id = metadata.get("task_id")
+        scenario_id = str(scenario_id or "unknown")
+
+        run_id = request.headers.get("x-run-id") or req_body.get("user") or PROXY_RUN_ID
+        run_id = str(run_id)
         
         # --- SHOCK INJECTION LOGIC ---
-        CURRENT_STEP += 1
-        print(f"Proxy: Processing Step {CURRENT_STEP}...")
+        step_index = _next_step_index(run_id)
+        print(f"Proxy: Processing Step {step_index} (run_id={run_id})...")
+
+        shock_injected = False
         
-        if config_store.shock_step > 0 and CURRENT_STEP == config_store.shock_step:
+        if config_store.shock_step > 0 and step_index == config_store.shock_step:
             if config_store.shock_message:
-                print(f"!!! PROXY INJECTING SHOCK at Step {CURRENT_STEP} !!!")
+                print(f"!!! PROXY INJECTING SHOCK at Step {step_index} !!!")
                 print(f"!!! Message: {config_store.shock_message}")
                 
                 # Inject the shock
@@ -130,11 +175,16 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                     "role": "user", 
                     "content": f"[SYSTEM INTERRUPT] {config_store.shock_message}"
                 })
+                shock_injected = True
         # -----------------------------
 
-        # Ensure logprobs are requested
-        req_body["logprobs"] = True
-        req_body["top_logprobs"] = 5
+        request_logprobs = _should_request_logprobs()
+        if request_logprobs:
+            req_body["logprobs"] = True
+            req_body["top_logprobs"] = 5
+        else:
+            req_body.pop("logprobs", None)
+            req_body.pop("top_logprobs", None)
 
         if openai_client is None:
             raise HTTPException(status_code=500, detail="OpenAI client not initialized.")
@@ -156,19 +206,28 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
             try:
                 response_obj = await asyncio.to_thread(
                     openai_client.chat.completions.create,
-                    **client_kwargs
+                    **client_kwargs,
                 )
                 break
             except Exception as e:
+                if request_logprobs and (PROXY_REQUEST_LOGPROBS or "auto").strip().lower() == "auto" and _looks_like_logprobs_unsupported(e):
+                    with _LOGPROBS_LOCK:
+                        global _LOGPROBS_SUPPORTED
+                        _LOGPROBS_SUPPORTED = False
+                    request_logprobs = False
+                    client_kwargs.pop("logprobs", None)
+                    client_kwargs.pop("top_logprobs", None)
+                    continue
+
                 if attempt == max_retries - 1:
                     print(f"Proxy Error: LLM Call failed: {e}")
                     raise e
-                await asyncio.sleep(2 ** attempt)
+                await asyncio.sleep(2**attempt)
 
         # Logging
         prompt_for_monitor = messages[-1].get("content", "") if messages else ""
         
-        def proxy_branching_probe_func():
+        def proxy_branching_probe_func() -> List[str]:
             probe_branches = []
             try:
                 for _ in range(5):
@@ -176,21 +235,99 @@ async def chat_completions(request: Request, authorized: bool = Depends(verify_a
                         model=REAL_VLLM_MODEL_NAME,
                         messages=messages,
                         temperature=0.9,
-                        n=1,
-                        logprobs=True,
-                        top_logprobs=1
+                        n=1
                     )
                     probe_branches.append(r.choices[0].message.content)
             except Exception:
                 pass
             return probe_branches
 
+        def extract_chosen_logprobs(obj) -> List[float]:
+            try:
+                choice = obj.choices[0]
+                if not choice.logprobs or not getattr(choice.logprobs, "content", None):
+                    return []
+                logprobs = []
+                for token in choice.logprobs.content:
+                    lp = getattr(token, "logprob", None)
+                    if isinstance(lp, (int, float)):
+                        logprobs.append(float(lp))
+                return logprobs
+            except Exception:
+                return []
+
+        def calculate_chosen_surprisal(token_logprobs: List[float]) -> Optional[float]:
+            if not token_logprobs:
+                return None
+
+            clean: List[float] = []
+            for lp in token_logprobs:
+                if isinstance(lp, (int, float)) and math.isfinite(lp):
+                    clean.append(float(lp))
+
+            if not clean:
+                return None
+
+            # log(p) must be <= 0. Some providers return 0 placeholders when unsupported.
+            if any(lp > 0.0 for lp in clean):
+                return None
+            if min(clean) > -1e-3:
+                return None
+
+            return sum(-lp for lp in clean) / len(clean)
+
+        token_logprobs = extract_chosen_logprobs(response_obj)
+        current_entropy = calculate_chosen_surprisal(token_logprobs)
+
+        prompt_tokens = None
+        completion_tokens = None
+        total_tokens = None
+        try:
+            usage = getattr(response_obj, "usage", None)
+            if usage is not None:
+                prompt_tokens = getattr(usage, "prompt_tokens", None)
+                completion_tokens = getattr(usage, "completion_tokens", None)
+                total_tokens = getattr(usage, "total_tokens", None)
+        except Exception:
+            pass
+
+        # Decide whether to compute SCR (expensive: 5 extra LLM calls).
+        probe_header = (request.headers.get("x-probe-scr") or "").strip()
+        should_probe_scr = False
+        if PROXY_SCR_MODE == "always":
+            should_probe_scr = True
+        elif PROXY_SCR_MODE == "shock" and shock_injected:
+            should_probe_scr = True
+        elif probe_header in ("1", "true", "yes", "on"):
+            should_probe_scr = True
+
+        event_type = "proxy_shock_injected" if shock_injected else "llm_call"
+        if should_probe_scr and not shock_injected:
+            event_type = "proxy_probe"
+
+        branches: List[str] = []
+        scr_value: Optional[float] = None
+        if should_probe_scr:
+            branches = await asyncio.to_thread(proxy_branching_probe_func)
+            if monitor.metric_service:
+                scr_value = monitor.metric_service.calculate_scr(branches)
+
         monitor.log_step(
-            model_name=model,
+            run_id=run_id,
+            scenario_id=scenario_id,
+            model_name=str(model),
+            step_index=step_index,
+            event_type=event_type,
             prompt=prompt_for_monitor,
             messages=messages,
             response_obj=response_obj.dict(),
-            branching_func=proxy_branching_probe_func
+            current_entropy=current_entropy,
+            scr=scr_value,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            branches_count=len(branches) if branches else None,
+            branching_func=None,
         )
         
         return response_obj 

@@ -15,7 +15,8 @@ fi
 # Use a custom env var that LiteLLM will pick up inside the Docker container
 export LLM_PROXY_BASE_URL="http://host.docker.internal:8000/v1" # Docker-specific host address
 export OPENAI_API_BASE="http://localhost:8000/v1" # Host-local address for the agent running on host
-export OPENAI_API_KEY="${VLLM_API_KEY}" # Still pass the real API key to the proxy
+# Use a dedicated proxy auth token (do NOT pass the real upstream key to clients).
+export OPENAI_API_KEY="${PROXY_AUTH_TOKEN:-dev-secret}"
 
 # Default model name if not explicitly set in .env or for litellm's sake
 # We'll use the VLLM_MODEL_NAME directly as the proxy will pass it through to the real LLM.
@@ -30,7 +31,7 @@ fi
 
 # Default arguments for tb run
 TB_DATASET_PATH="terminal-bench/tasks"
-TB_TASK_ID="drug_filter_shock" # Default task for initial test
+TB_TASK_ID="bank-trans-filter" # Default TerminalBench task for initial test
 TB_AGENT="mini-swe-agent" # Uses LiteLLM which we patched
 TB_MODEL_ARG="--model $MODEL_TO_USE"
 
@@ -52,6 +53,7 @@ echo "  Agent: $TB_AGENT"
 echo "  Model: $MODEL_TO_USE"
 echo "  OpenAI API Base: $OPENAI_API_BASE"
 env | grep OPENAI
+export TB_TASK_ID="$TB_TASK_ID"
 
 # --- Start LLM Proxy in background ---
 PROXY_LOG_FILE="proxy.log"
@@ -83,4 +85,6 @@ kill "$PROXY_PID"
 wait "$PROXY_PID" 2>/dev/null # Wait for it to terminate
 echo "LLM Proxy stopped."
 
-echo "TerminalBench run complete. Check $TB_OUTPUT_LOG for harness output and $PROXY_LOG_FILE for proxy logs."
+echo "TerminalBench run complete."
+echo "Proxy logs: $PROXY_LOG_FILE"
+echo "TerminalBench run artifacts: ./runs/"

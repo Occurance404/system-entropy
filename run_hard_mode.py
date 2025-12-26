@@ -8,10 +8,17 @@ from dotenv import dotenv_values
 from src.orchestrator.engine import Orchestrator
 from src.services.metrics import EmbeddingMetricService
 from src.agent.real_agent import OpenAICompatibleAgent
-# Fallback to mock if needed, but user requested SOTA
+from src.monitor.terminal_bench_monitor import TerminalBenchMonitor
 from src.agent.mock_agent import ScriptedAgent 
 
-def run_hard_mode_experiment(scenario_id: str, max_steps: int, probe_interval: int, model_name: str = None):
+def run_hard_mode_experiment(
+    scenario_id: str,
+    max_steps: int,
+    probe_interval: int,
+    model_name: str = None,
+    autonomous: bool = False,
+    cheap: bool = False,
+):
     # Load environment variables
     config = dotenv_values(".env")
     
@@ -24,10 +31,19 @@ def run_hard_mode_experiment(scenario_id: str, max_steps: int, probe_interval: i
     print(f"--- Starting HARD MODE Experiment: {scenario_id} ---")
     print(f"Model: {primary_model}")
     print(f"Intervention/Rescue: DISABLED")
+    if cheap:
+        print("Mode: CHEAP (Probes disabled, validation enabled)")
+        probe_interval = 0
     print(f"Silent Probe Interval: Every {probe_interval} steps")
+    if autonomous:
+        print("Mode: AUTONOMOUS (Will stop on 'Task Complete')")
     
     # 1. Initialize Components
     metric_service = EmbeddingMetricService()
+    
+    # Initialize Monitor (Logs to data/logs_terminal_bench/)
+    metrics_monitor = TerminalBenchMonitor()
+    print(f"Logging via Monitor to: {metrics_monitor.log_file}")
     
     agent = None
     if api_key:
@@ -51,69 +67,64 @@ def run_hard_mode_experiment(scenario_id: str, max_steps: int, probe_interval: i
             scenario_id=scenario_id, 
             agent=agent, 
             metric_service=metric_service,
+            metrics_monitor=metrics_monitor, # Pass the monitor here
             enable_intervention=False, # Strict "No Rescue" rule
-            probe_interval=probe_interval
+            probe_interval=probe_interval,
+            enable_validation=cheap,
+            stop_on_success=cheap,
+            enable_branching_probes=not cheap,
         )
     except ValueError as e:
         print(f"Error initializing Orchestrator: {e}")
         sys.exit(1)
     
-    # 2. Setup Logging
-    log_dir = "data/logs_hard_mode"
-    os.makedirs(log_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # 2. Simulation Loop
+    stop_phrases = ["task is complete", "final summary", "mission accomplished", "completing the task"]
     
-    # Sanitize primary_model name for use in file path
-    sanitized_model_name = primary_model.replace("/", "_").replace(":", "_")
-    log_file = f"{log_dir}/{scenario_id}_{sanitized_model_name}_{timestamp}.jsonl"
-    
-    print(f"Logging to: {log_file}")
-    
-    with open(log_file, "w") as f:
-        # 3. Simulation Loop
-        for i in range(max_steps):
-            print(f"\n[Step {i+1}] Executing...")
+    for i in range(max_steps):
+        print(f"\n[Step {i+1}] Executing...")
+        
+        try:
+            step_result_dict = orchestrator.step()
             
-            try:
-                step_result_dict = orchestrator.step()
-                
-                log_entry = {
-                    "timestamp": datetime.now().isoformat(),
-                    "step_index": step_result_dict.get("step_index", i + 1),
-                    "orchestrator_state": {
-                        "panic_counter": orchestrator.panic_counter,
-                        "current_agent": orchestrator.agent.model_name,
-                        "intervention_enabled": False
-                    },
-                    "event_type": step_result_dict.get("event_type", "unknown"),
-                    "metrics": step_result_dict
-                }
-                
-                f.write(json.dumps(log_entry) + "\n")
-                f.flush()
-                
-                event = log_entry['event_type']
-                print(f"  Event Type: {event}")
-                
-                if event == 'periodic_probe':
-                     print(f"  (Silent Probe) SCR: {log_entry['metrics'].get('scr', 'N/A')}")
-                elif event == 'panic_detected':
-                     print(f"  !!! PANIC DETECTED (Ignored) !!! Entropy: {log_entry['metrics'].get('current_entropy')}")
-
-            except Exception as e:
-                print(f"CRITICAL ERROR at Step {i+1}: {e}")
-                import traceback
-                traceback.print_exc()
+            # Console Feedback
+            event = step_result_dict.get('event_type', 'unknown')
+            print(f"  Event Type: {event}")
+            
+            if event == 'periodic_probe':
+                    print(f"  (Silent Probe) SCR: {step_result_dict.get('scr', 'N/A')}")
+            elif event == 'panic_detected':
+                    print(f"  !!! PANIC DETECTED (Ignored) !!! Entropy: {step_result_dict.get('current_entropy')}")
+            
+            # Autonomous Stopping Logic
+            if autonomous and event == 'llm_reply':
+                content = step_result_dict.get('content', '')
+                if isinstance(content, str):
+                    content_lower = content.lower()
+                    if any(phrase in content_lower for phrase in stop_phrases):
+                        print("\n[AUTONOMOUS STOP] Agent signaled task completion.")
+                        print(f"Reason: Found stop phrase in: '{content[:100]}...'")
+                        break
+            if step_result_dict.get("task_complete") or event == "task_complete":
+                print("\n[TASK COMPLETE] Validator signaled success.")
                 break
 
-    print(f"\n--- Hard Mode Experiment Complete. Check {log_file} ---")
+        except Exception as e:
+            print(f"CRITICAL ERROR at Step {i+1}: {e}")
+            import traceback
+            traceback.print_exc()
+            break
+
+    print(f"\n--- Hard Mode Experiment Complete. Check {metrics_monitor.log_file} ---")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Hard Mode (No Rescue) Experiment.")
     parser.add_argument("--scenario_id", type=str, required=True, help="ID of the scenario (e.g., hard_coding_challenge)")
-    parser.add_argument("--max_steps", type=int, default=20, help="Max steps to allow")
-    parser.add_argument("--probe_interval", type=int, default=3, help="Steps between silent SCR probes")
+    parser.add_argument("--max_steps", type=int, default=50, help="Max safety limit. Set to 500+ for open-ended tasks.")
+    parser.add_argument("--probe_interval", type=int, default=5, help="Steps between silent SCR probes")
     parser.add_argument("--model", type=str, default=None, help="Model name to use")
+    parser.add_argument("--autonomous", action="store_true", help="Stop automatically when agent says 'Task is complete'.")
+    parser.add_argument("--cheap", action="store_true", help="Disable probes and stop on validator success.")
     
     args = parser.parse_args()
     
@@ -121,5 +132,7 @@ if __name__ == "__main__":
         scenario_id=args.scenario_id, 
         max_steps=args.max_steps, 
         probe_interval=args.probe_interval,
-        model_name=args.model
+        model_name=args.model,
+        autonomous=args.autonomous,
+        cheap=args.cheap,
     )

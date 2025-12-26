@@ -29,84 +29,108 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
         print("No data to plot.")
         return
 
-    # Ensure all relevant columns exist, fill missing with NaN for plotting clarity
-    if 'current_entropy' not in df.columns: df['current_entropy'] = 0.0
-    df['current_entropy'] = df['current_entropy'].fillna(method='ffill').fillna(method='bfill') # Fill forward/backward for continuous plot
-    
-    if 'scr' not in df.columns: df['scr'] = 0.0
-    if 'ige' not in df.columns: df['ige'] = 0.0
-    if 'cbf' not in df.columns: df['cbf'] = 0.0
-    if 'rdi' not in df.columns: df['rdi'] = 0.0
-    if 'panic_counter' not in df.columns:
-         # Try to extract from orchestrator_state if column missing
-         if 'orchestrator_state' in df.columns:
-             df['panic_counter'] = df['orchestrator_state'].apply(lambda x: x.get('panic_counter', 0) if isinstance(x, dict) else 0)
-         else:
-             df['panic_counter'] = 0
+    df = df.copy()
 
-    steps = df['step_index']
+    # Ensure all relevant columns exist; keep missing values as NaN/None (do not forward-fill).
+    if 'step_index' not in df.columns:
+        df['step_index'] = range(1, len(df) + 1)
+    df['step_index'] = pd.to_numeric(df['step_index'], errors='coerce')
+    df = df.sort_values('step_index')
+
+    for col in ['current_entropy', 'scr', 'ige', 'cbf', 'rdi', 'compression_ratio']:
+        if col not in df.columns:
+            df[col] = pd.NA
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    if 'event_type' not in df.columns:
+        df['event_type'] = 'unknown_action'
+
+    if 'panic_counter' not in df.columns:
+        if 'orchestrator_state' in df.columns:
+            df['panic_counter'] = df['orchestrator_state'].apply(
+                lambda x: x.get('panic_counter', 0) if isinstance(x, dict) else 0
+            )
+        else:
+            df['panic_counter'] = 0
+    df['panic_counter'] = pd.to_numeric(df['panic_counter'], errors='coerce').fillna(0)
+
+    # Main "step" events can share step_index with periodic_probe entries; exclude probes for time-series plots.
+    main_events = df[~df['event_type'].isin(['periodic_probe'])]
+    steps = main_events['step_index']
     
     fig, axes = plt.subplots(6, 1, figsize=(12, 22), sharex=True) # 6 subplots now
     
     # Plot 1: Current Entropy
-    axes[0].plot(steps, df['current_entropy'], marker='o', linestyle='-', color='blue', label='Current Entropy')
+    entropy_data = main_events[main_events['current_entropy'].notna()]
+    axes[0].plot(
+        entropy_data['step_index'],
+        entropy_data['current_entropy'],
+        marker='o',
+        linestyle='-',
+        color='blue',
+        label='Current Entropy',
+    )
     axes[0].set_ylabel('Entropy')
     axes[0].set_title('Agent Internal State Over Time')
     axes[0].grid(True, alpha=0.3)
     axes[0].legend()
 
     # Plot 2: Panic Counter
-    axes[1].plot(steps, df['panic_counter'], marker='o', linestyle='-', color='orange', label='Panic Counter')
+    axes[1].plot(steps, main_events['panic_counter'], marker='o', linestyle='-', color='orange', label='Panic Counter')
     axes[1].set_ylabel('Panic Level')
     axes[1].grid(True, alpha=0.3)
     axes[1].legend()
 
     # Plot 3: Semantic Collapse Ratio (SCR)
-    # Plot whenever SCR is present and > 0, regardless of event type
-    if 'scr' in df.columns:
-        scr_data = df[df['scr'] > 0]
-        
-        if not scr_data.empty:
-            # Differentiate colors: Red for shocks, Blue for silent probes (attached to other events)
-            colors = ['red' if et == 'perturbation_triggered' else 'blue' for et in scr_data['event_type']]
-            
-            axes[2].bar(scr_data['step_index'], scr_data['scr'], color=colors, width=0.5)
-            
-            # Add legend entries manually
-            from matplotlib.patches import Patch
-            legend_elements = [
-                Patch(facecolor='red', label='SCR (Shock)'),
-                Patch(facecolor='blue', label='SCR (Silent Probe)')
-            ]
-            axes[2].legend(handles=legend_elements)
+    probe_events = df[df['event_type'].isin(['perturbation_triggered', 'periodic_probe', 'proxy_probe', 'proxy_shock_injected'])]
+    scr_data = probe_events[probe_events['scr'].notna()]
+    if not scr_data.empty:
+        colors = []
+        for et in scr_data['event_type']:
+            if et in ('perturbation_triggered', 'proxy_shock_injected'):
+                colors.append('red')
+            else:
+                colors.append('blue')
 
-            for i, row in scr_data.iterrows():
-                axes[2].text(row['step_index'], row['scr'] + 0.01, f"{row['scr']:.2f}", ha='center', fontsize=8)
-                
+        axes[2].bar(scr_data['step_index'], scr_data['scr'], color=colors, width=0.5)
+
+        from matplotlib.patches import Patch
+
+        legend_elements = [
+            Patch(facecolor='red', label='SCR (Perturbation/Shock)'),
+            Patch(facecolor='blue', label='SCR (Periodic Probe)'),
+        ]
+        axes[2].legend(handles=legend_elements)
+
+        for _, row in scr_data.iterrows():
+            axes[2].text(row['step_index'], row['scr'] + 0.01, f"{row['scr']:.2f}", ha='center', fontsize=8)
+
     axes[2].set_ylabel('SCR Score')
-    axes[2].set_title('Semantic Collapse Ratio (Shock vs. Silent)')
-    axes[2].set_ylim(0, 1.0) # SCR is 0-1
+    axes[2].set_title('Semantic Collapse Ratio (Perturbation vs. Periodic Probe)')
+    if not scr_data.empty:
+        scr_max = float(scr_data['scr'].max())
+        axes[2].set_ylim(0, max(1.0, min(2.0, scr_max * 1.1)))
     axes[2].grid(True, alpha=0.3)
 
     # Plot 4: Information Gain Efficiency (IGE)
-    ige_data = df[df['event_type'] == 'tool_execution']
+    ige_data = main_events[main_events['ige'].notna()]
     if not ige_data.empty:
         colors = ['green' if v > 0 else 'red' for v in ige_data['ige']]
         axes[3].bar(ige_data['step_index'], ige_data['ige'], color=colors, width=0.5, label='IGE')
     axes[3].set_ylabel('IGE (Info Gain)')
-    axes[3].set_title('Information Gain Efficiency (Tool Usage)')
+    axes[3].set_title('Information Gain Efficiency (Entropy Delta / Cost)')
     axes[3].axhline(0, color='black', linewidth=0.8)
     axes[3].grid(True, alpha=0.3)
     axes[3].legend()
 
     # Plot 5: Cyclomatic Bloat Factor (CBF) & Regressive Debt Index (RDI)
-    cbf_data = df[df['cbf'] > 0] # Only plot if CBF was calculated
+    cbf_data = main_events[main_events['cbf'] > 0] # Only plot if CBF was calculated
     if not cbf_data.empty:
         axes[4].bar(cbf_data['step_index'], cbf_data['cbf'], color='purple', width=0.4, label='CBF (Code Bloat)', align='center')
         for i, row in cbf_data.iterrows():
             axes[4].text(row['step_index'], row['cbf'] + 0.1, f"{int(row['cbf'])}", ha='center')
 
-    rdi_data = df[df['rdi'] > 0] # Only plot if RDI was calculated
+    rdi_data = main_events[main_events['rdi'] > 0] # Only plot if RDI was calculated
     if not rdi_data.empty:
         # Offset slightly for RDI bars if CBF also exists at same step
         offset = -0.2 if not cbf_data.empty else 0
@@ -120,12 +144,10 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
     axes[4].legend()
 
     # Plot 6: Compression Ratio (Repetition Detector)
-    # Ensure compression_ratio column exists
-    if 'compression_ratio' in df.columns:
-        cr_data = df[df['compression_ratio'].notna()]
-        if not cr_data.empty:
-            axes[5].plot(cr_data['step_index'], cr_data['compression_ratio'], marker='s', linestyle='-', color='teal', label='Compression Ratio')
-            axes[5].axhline(0.2, color='red', linestyle='--', alpha=0.5, label='Looping Threshold (<0.2)')
+    cr_data = main_events[main_events['compression_ratio'].notna()]
+    if not cr_data.empty:
+        axes[5].plot(cr_data['step_index'], cr_data['compression_ratio'], marker='s', linestyle='-', color='teal', label='Compression Ratio')
+        axes[5].axhline(0.2, color='red', linestyle='--', alpha=0.5, label='Looping Threshold (<0.2)')
             
     axes[5].set_ylabel('Ratio (Compressed/Raw)')
     axes[5].set_title('Structural Health (Compression Ratio)')

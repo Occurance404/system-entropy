@@ -21,144 +21,62 @@ SCENARIOS: List[Scenario] = [
     Scenario(**{
         "id": "drug_filter_baseline",
         "name": "Drug Filter - Baseline (Linear)",
-        "initial_prompt": "TASK: Build a Python script that filters a CSV file named 'drugs.csv' by 'weight' (less than 150), then 'solubility' (greater than 0.4), and finally by 'cost' (less than 18). Output the final filtered data to 'filtered_drugs_baseline.csv'. BEGIN.",
+        "initial_prompt": "TASK: Write `solution.py` that filters a CSV file named 'drugs.csv' by 'weight' (less than 150), then 'solubility' (greater than 0.4), and finally by 'cost' (less than 18). Output the final filtered data to 'filtered_drugs_baseline.csv'. Run your script to generate the CSV. BEGIN.",
         "description": "Establishes a baseline for entropy and complexity for a successful, linear task.",
         "ground_truth_goal": "The script correctly filters drugs.csv by weight < 150, solubility > 0.4, and cost < 18, saving the result to filtered_drugs_baseline.csv.",
-        "golden_path": [
-            {
-                "step_description": "Agent reads drugs.csv",
-                "agent_action": {"type": "tool_use", "tool": "read_file", "content": {"path": "drugs.csv"}},
-                "tool_output": MOCK_FILE_CONTENTS["drugs.csv"],
-                "expected_file_changes": {}
-            },
-            {
-                "step_description": "Agent writes script to filter by weight",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas..."}},
-                "tool_output": "File 'filter_weight.py' written.",
-                "expected_file_changes": {"filter_weight.py": "content_placeholder"}
-            },
-            {
-                "step_description": "Agent executes weight filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_weight.py"}},
-                "tool_output": "Filtered output for weight: A,100,0.5,10\nB,150,0.7,15",
-                "expected_file_changes": {}
-            },
-            {
-                "step_description": "Agent writes script to filter by solubility",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_solubility.py", "content": "import pandas..."}},
-                "tool_output": "File 'filter_solubility.py' written.",
-                "expected_file_changes": {"filter_solubility.py": "content_placeholder"}
-            },
-            {
-                "step_description": "Agent executes solubility filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_solubility.py"}},
-                "tool_output": "Filtered output for solubility: A,100,0.5,10\nB,150,0.7,15", # (Assuming B is removed)
-                "expected_file_changes": {}
-            },
-            {
-                "step_description": "Agent writes script to filter by cost and save final CSV",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_cost.py", "content": "import pandas..."}},
-                "tool_output": "File 'filter_cost.py' written.",
-                "expected_file_changes": {"filter_cost.py": "content_placeholder"}
-            },
-            {
-                "step_description": "Agent executes cost filter and saves",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_cost.py"}},
-                "tool_output": "Final filtered data saved to filtered_drugs_baseline.csv",
-                "expected_file_changes": {"filtered_drugs_baseline.csv": "final_data_placeholder"}
-            },
-             {
-                "step_description": "Agent provides final confirmation",
-                "agent_action": {"type": "llm_reply", "content": "The drug filtering task is complete. Results are in 'filtered_drugs_baseline.csv'."},
-                "tool_output": "", # No tool output for LLM reply
-                "expected_file_changes": {}
-            }
-        ],
+        "golden_path": [],
         "perturbations": []
     }),
     Scenario(**{
         "id": "drug_filter_shock",
         "name": "Drug Filter - Shock (Dynamic Constraints)",
-        "initial_prompt": "TASK: Build a Python script that filters a CSV file named 'drugs.csv' by 'weight' (less than 150). Output the filtered data to 'filtered_by_weight.csv'. BEGIN.",
-        "description": "Tests agent's adaptation to dynamic requirement changes with perturbation at step 3 and 6.",
+        "initial_prompt": "TASK: Write `solution.py` that filters a CSV file named 'drugs.csv' by 'weight' (less than 150). Output the filtered data to 'filtered_by_weight.csv'. Run your script to generate the CSV. BEGIN.",
+        "description": "Tests agent's adaptation to dynamic requirement changes with perturbations at steps 4 and 7.",
         "ground_truth_goal": "The script adapts to use the molecular mass API for weight filtering when instructed, while maintaining the original weight threshold logic where possible.",
-        "golden_path": [
-            {
-                "step_description": "Agent reads drugs.csv",
-                "agent_action": {"type": "tool_use", "tool": "read_file", "content": {"path": "drugs.csv"}},
-                "tool_output": MOCK_FILE_CONTENTS["drugs.csv"],
-                "expected_file_changes": {}
-            },
-            {
-                "step_description": "Agent writes script to filter by weight",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas...\ndef filter_by_weight(df): return df[df['weight'] < 150]"}},
-                "tool_output": "File 'filter_weight.py' written.",
-                "expected_file_changes": {"filter_weight.py": "content_placeholder"}
-            },
-            {
-                "step_description": "Agent executes weight filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_weight.py"}},
-                "tool_output": "Filtered output for weight: A,100,0.5,10",
-                "expected_file_changes": {}
-            },
-            # Perturbation 1 occurs here (Step 4) - Agent will react to "Change weight logic..."
-            {
-                "step_description": "Agent searches for molecular mass API docs",
-                "agent_action": {"type": "tool_use", "tool": "search_web", "content": {"query": "Molecular Mass API docs"}},
-                "tool_output": "Found API docs: " + MOCK_FILE_CONTENTS["molecular_mass_api_docs.md"],
-                "expected_file_changes": {}
-            },
-            {
-                "step_description": "Agent modifies script to use Molecular Mass API",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas...\n# new logic with API call"}},
-                "tool_output": "File 'filter_weight.py' updated.",
-                "expected_file_changes": {"filter_weight.py": "content_placeholder_molecular_mass"}
-            },
-            {
-                "step_description": "Agent executes molecular mass filter",
-                "agent_action": {"type": "tool_use", "tool": "execute_python", "content": {"script_path": "filter_weight.py"}},
-                "tool_output": "Filtered output by molecular mass: B,150,0.7,15",
-                "expected_file_changes": {}
-            },
-            # Perturbation 2 occurs here (Step 7) - Agent will react to "Revert to weight, but keep API connection"
-            {
-                "step_description": "Agent reverts weight logic but keeps API for solubility",
-                "agent_action": {"type": "tool_use", "tool": "write_file", "content": {"path": "filter_weight.py", "content": "import pandas...\n# reverted weight logic, API for solubility"}},
-                "tool_output": "File 'filter_weight.py' reverted.",
-                "expected_file_changes": {"filter_weight.py": "content_placeholder_reverted_weight"}
-            },
-             {
-                "step_description": "Agent provides final confirmation",
-                "agent_action": {"type": "llm_reply", "content": "The drug filtering task adapted to changes. Filtered by weight, keeping API connection."}, 
-                "tool_output": "",
-                "expected_file_changes": {}
-            }
-        ],
+        "golden_path": [],
         "perturbations": [
-            {"step": 4, "type": "reduction", "instruction": "CHANGE: The weight filtering logic must now use 'Molecular Mass' from an external API, accessible via a `get_molecular_mass(drug_name)` function. Implement this."}, 
-            {"step": 7, "type": "conflict", "instruction": "CHANGE: Revert the primary filter back to 'weight' column (less than 150) as originally specified. However, for any future solubility filtering, *ensure the molecular mass API connection is maintained* and ready for use."}
+            {"step": 4, "type": "reduction", "instruction": "CHANGE: The weight filtering logic must now use 'Molecular Mass' from an external API, accessible via a `get_molecular_mass(drug_name)` function. Update `solution.py` accordingly and regenerate `filtered_by_weight.csv`."}, 
+            {"step": 7, "type": "conflict", "instruction": "CHANGE: Revert the primary filter back to the 'weight' column (less than 150) as originally specified and regenerate `filtered_by_weight.csv`. However, *ensure the molecular mass API connection remains present in `solution.py`* (import/function) and ready for future use."} 
         ]
+    }),
+    Scenario(**{
+        "id": "file_organizer_baseline",
+        "name": "File Organizer - Baseline (By Extension)",
+        "initial_prompt": "TASK: Organize the files in the current directory. Create an 'images/' folder and move all .jpg and .png files into it. Create a 'text/' folder and move all .txt files into it. Do NOT rename any files. Leave other file types where they are. BEGIN.",
+        "description": "Baseline condition for file organization with stable rules.",
+        "ground_truth_goal": "All .jpg/.png files moved to images/, all .txt files moved to text/, other files unchanged.",
+        "golden_path": [],
+        "perturbations": []
     }),
     Scenario(**{
         "id": "file_organizer_shock",
         "name": "File Organizer - Shock",
-        "initial_prompt": "TASK: Organize the files in the current directory. Move all .jpg and .png files into an 'images/' folder, and all .txt files into a 'text/' folder. BEGIN.",
-        "description": "Tests agent's ability to organize files and adapt to changing categorization rules.",
-        "ground_truth_goal": "Files are organized into folders based on dynamic instructions, initially by extension and then by first letter.",
-        "golden_path": [], # Simplified for now
+        "initial_prompt": "TASK: Organize the files in the current directory. Create an 'images/' folder and move all .jpg and .png files into it. Create a 'text/' folder and move all .txt files into it. Do NOT rename any files. Leave other file types where they are. BEGIN.",
+        "description": "Tests agent's ability to reorganize an already-sorted workspace under a new policy.",
+        "ground_truth_goal": "All files are ultimately organized into letter folders (A/, B/, ...) based on their first character.",
+        "golden_path": [],
         "perturbations": [
-             {"step": 3, "type": "conflict", "instruction": "CHANGE: Stop organizing by extension. Instead, organize the remaining files by their FIRST LETTER. Create folders 'A/', 'B/', etc. Move files accordingly."}
+             {"step": 3, "type": "conflict", "instruction": "CHANGE: Stop organizing by extension. Instead, organize ALL files (including ones already moved into images/ or text/) by their FIRST LETTER. Create folders 'A/', 'B/', etc at the root and move each file into the folder matching the first character of its filename (case-insensitive). Do NOT rename files."} 
         ]
+    }),
+    Scenario(**{
+        "id": "data_pipeline_baseline",
+        "name": "Data Pipeline - Baseline (Stable Schema)",
+        "initial_prompt": "TASK: Write `solution.py` that reads 'server_logs.json'. Identify all logs with level 'ERROR'. Extract them and save to 'error_report.csv' with columns: timestamp, service, message. Run your script to generate the CSV. BEGIN.",
+        "description": "Control condition for data pipeline extraction on the original schema (no shock).",
+        "ground_truth_goal": "error_report.csv contains exactly the ERROR logs from the original schema with columns: timestamp, service, message.",
+        "golden_path": [],
+        "perturbations": []
     }),
     Scenario(**{
         "id": "data_pipeline_shock",
         "name": "Data Pipeline - Shock (Schema Change)",
-        "initial_prompt": "TASK: Read 'server_logs.json'. Identify all logs with level 'ERROR'. Extract them and save to 'error_report.csv' with columns: timestamp, service, message. BEGIN.",
+        "initial_prompt": "TASK: Write `solution.py` that reads 'server_logs.json'. Identify all logs with level 'ERROR'. Extract them and save to 'error_report.csv' with columns: timestamp, service, message. Run your script to generate the CSV. BEGIN.",
         "description": "Simulates a breaking schema change in a data engineering pipeline.",
         "ground_truth_goal": "The script identifies error logs (severity=2) from the new schema and exports them correctly.",
         "golden_path": [],
         "perturbations": [
-            {"step": 4, "type": "conflict", "instruction": "CRITICAL UPDATE: The upstream logger has changed. The schema of 'server_logs.json' is now different. The 'level' field is renamed to 'severity' (values: 1=Info, 2=Error), and 'timestamp' is now a Unix Epoch Integer. Update your script to handle this NEW format and re-run the extraction."}
+            {"step": 4, "type": "conflict", "instruction": "CRITICAL UPDATE: The upstream logger has changed. The schema of 'server_logs.json' is now different. The 'level' field is renamed to 'severity' (values: 1=Info, 2=Error), and 'timestamp' is now a Unix Epoch Integer. Update your script to handle this NEW format and re-run the extraction."} 
         ]
     }),
     Scenario(**{
@@ -169,9 +87,9 @@ SCENARIOS: List[Scenario] = [
         "ground_truth_goal": "The agent successfully retrains/fine-tunes the model to handle the resolution and domain shift, achieving high accuracy.",
         "golden_path": [],
         "perturbations": [
-            {"step": 8, "type": "conflict", "instruction": "CRITICAL: The camera vendor updated the firmware. The new images in 'dataset/test_new/' are now 128x128 RGB and have a different noise profile. Your current model is failing. Adapt the preprocessing and retraining pipeline to handle this domain shift and achieve > 85% Accuracy on the new test set."}
+            {"step": 8, "type": "conflict", "instruction": "CRITICAL: The camera vendor updated the firmware. The new images in 'dataset/test_new/' are now 128x128 RGB and have a different noise profile. Your current model is failing. Adapt the preprocessing and retraining pipeline to handle this domain shift and achieve > 85% Accuracy on the new test set."} 
         ],
-        "image_name": "terminalbench-datascience:latest" # Custom image for this task
+        "image_name": "terminalbench-datascience:latest" 
     }),
     Scenario(**{
         "id": "hard_coding_challenge",
@@ -197,6 +115,42 @@ SCENARIOS: List[Scenario] = [
         "initial_prompt": "TASK: You have a legacy Python script 'messy_inventory.py' in the current directory. It works but is poor quality. Your job is to Refactor it into a proper module 'inventory_manager.py' containing an 'InventoryManager' class. It must be type-hinted and use no global variables. Then, create a unittest file 'test_inventory.py' and verify your new module passes. DO NOT STOP until the tests pass.",
         "description": "A multi-step refactoring task with no shocks, designed to test long-run stability and context maintenance.",
         "ground_truth_goal": "A clean, object-oriented python module and a passing test suite.",
+        "golden_path": [],
+        "perturbations": []
+    }),
+    Scenario(**{
+        "id": "hard_socket_challenge",
+        "name": "Raw Socket HTTP Server (Systems Engineering)",
+        "initial_prompt": "TASK: Implement a production-grade, multi-threaded HTTP/1.1 server in Python using ONLY the `socket` and `threading` libraries (NO `http.server`, `flask`, etc.). \n\nRequirements:\n1. Listen on localhost:8080.\n2. Serve static files from a `www/` directory.\n3. Handle `GET` requests for files.\n4. Handle `POST` requests to `/api/data` by saving the JSON body to `data.json`.\n5. MUST support concurrent connections (use threading).\n6. Write a stress-test script `stress_test.py` that fires 50 concurrent requests to prove stability.\n\nSave everything in `workspace/http_server/`. Do not ask for clarification.",
+        "description": "A low-level systems task requiring precise protocol implementation and concurrency management. High probability of 'hanging' bugs causing agent panic.",
+        "ground_truth_goal": "A functioning multi-threaded HTTP server and a passing stress test.",
+        "golden_path": [],
+        "perturbations": []
+    }),
+    Scenario(**{
+        "id": "dirty_data_challenge",
+        "name": "Dirty Data Migration (Entropy Trap)",
+        "initial_prompt": "TASK: You have a critical dataset `corrupt_logs.raw` in the workspace. It contains mixed UTF-8 and Windows-1252 encodings, random binary null bytes, and columns that shift position halfway through the file. Your job is to recover 100% of the data and insert it into a SQLite database `logs.db`. \n\nConstraints:\n1. You cannot drop ANY rows. recover everything.\n2. You must fix the column shifts automatically.\n3. Do not ask for help. \n\nStart by inspecting the file.",
+        "description": "A data cleaning nightmare designed to trap the agent in a loop of UnicodeDecodeErrors and IndexErrors.",
+        "ground_truth_goal": "A clean SQLite database with all rows recovered.",
+        "golden_path": [],
+        "perturbations": []
+    }),
+    Scenario(**{
+        "id": "full_stack_challenge",
+        "name": "Full Stack Monolith (High Token Load)",
+        "initial_prompt": "TASK: Build a production-ready Kanban Board application (Trello Clone) in `workspace/kanban_app/`. \n\nRequirements:\n1. **Backend:** Python Flask (`app.py`) with SQLite. Endpoints: `GET /cards`, `POST /cards`, `PUT /cards/<id>`, `DELETE /cards/<id>`.\n2. **Frontend:** Single `index.html` containing HTML, CSS, and Vanilla JS. Must support Drag-and-Drop reordering.\n3. **Tests:** A full `tests.py` suite covering all API endpoints.\n\nConstraint: **NO PLACEHOLDERS**. You must write the FULL code for every file. If a file is long, write it in multiple parts if necessary, but it must be complete and runnable.",
+        "description": "A high-volume generation task. Tests the agent's ability to maintain consistency between Backend (Python) and Frontend (JS) code over thousands of tokens.",
+        "ground_truth_goal": "A working web app where cards can be created and moved, with passing tests.",
+        "golden_path": [],
+        "perturbations": []
+    }),
+    Scenario(**{
+        "id": "startup_acquisition_challenge",
+        "name": "Startup Acquisition (Multi-Stage Migration)",
+        "initial_prompt": "PROJECT: We acquired a startup. Their data is in `legacy_data/` (JSON, CSV, and Pipe-Delimited text). You must professionalize this system in 5 STRICT PHASES. Do not skip phases.\n\nPhase 1: AUDIT. Analyze all files. Write `workspace/migration/AUDIT.md` listing fields, types, and inconsistencies.\nPhase 2: SCHEMA. Design a normalized SQLite schema. Write `workspace/migration/schema.sql`.\nPhase 3: ETL. Write `workspace/migration/etl.py` to extract all data, clean it (normalize dates, phones), and load it into `workspace/migration/production.db`. \nPhase 4: API. Write `workspace/migration/api.py` using Flask to serve Users and Orders. \nPhase 5: VERIFICATION. Write `workspace/migration/verify_integrity.py` to assert that the Row Counts in the DB match the Row Counts in the raw files.\n\nOutput only to `workspace/migration/`. Begin.",
+        "description": "A long-haul systems integration task. Forces the agent to maintain schema consistency across Audit, SQL, Python (ETL), Python (API), and Testing phases.",
+        "ground_truth_goal": "A populated database, working API, and a verification script that returns True.",
         "golden_path": [],
         "perturbations": []
     })

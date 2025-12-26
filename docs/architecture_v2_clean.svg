@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-label="Context-aware autonomous developer architecture (V2)">
+  <defs>
+    <style>
+      .box { fill: #ffffff; stroke: #111827; stroke-width: 2; rx: 8; }
+      .zone { fill: #f3f4f6; stroke: none; rx: 16; }
+      .zone-label { font: 700 16px system-ui, sans-serif; fill: #9ca3af; text-transform: uppercase; letter-spacing: 1px; }
+      .title { font: 700 24px system-ui, sans-serif; fill: #111827; }
+      .label { font: 600 16px system-ui, sans-serif; fill: #111827; }
+      .text { font: 400 14px system-ui, sans-serif; fill: #374151; }
+      .arrow { stroke: #111827; stroke-width: 2; fill: none; marker-end: url(#arrowHead); }
+      .arrow-dashed { stroke: #6b7280; stroke-width: 2; fill: none; stroke-dasharray: 5 5; marker-end: url(#arrowHeadMuted); }
+    </style>
+    <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111827"/>
+    </marker>
+    <marker id="arrowHeadMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <text x="50" y="50" class="title">Context-Aware Autonomous Developer (V2)</text>
+
+  <!-- ZONES -->
+  <!-- Infrastructure Zone -->
+  <rect x="50" y="80" width="400" height="780" class="zone"/>
+  <text x="70" y="110" class="zone-label">Infrastructure Brain</text>
+
+  <!-- Context Zone -->
+  <rect x="480" y="80" width="400" height="780" class="zone"/>
+  <text x="500" y="110" class="zone-label">Context Engine</text>
+
+  <!-- Execution Zone -->
+  <rect x="910" y="80" width="440" height="780" class="zone"/>
+  <text x="930" y="110" class="zone-label">Execution Environment</text>
+
+
+  <!-- COMPONENTS: INFRASTRUCTURE -->
+  
+  <!-- Orchestrator -->
+  <rect x="80" y="140" width="340" height="140" class="box"/>
+  <text x="100" y="170" class="label">Orchestrator</text>
+  <text x="100" y="200" class="text">- State Machine (Loop Control)</text>
+  <text x="100" y="225" class="text">- Recovery (Wipe / Rollback)</text>
+  <text x="100" y="250" class="text">- Driver Swapping</text>
+
+  <!-- Memory -->
+  <rect x="80" y="320" width="340" height="120" class="box"/>
+  <text x="100" y="350" class="label">Memory Store</text>
+  <text x="100" y="380" class="text">STATE.json (Goal)</text>
+  <text x="100" y="405" class="text">EVENTS.jsonl (History)</text>
+
+  <!-- Observer -->
+  <rect x="80" y="600" width="340" height="120" class="box"/>
+  <text x="100" y="630" class="label">Observer</text>
+  <text x="100" y="660" class="text">- Captures Git Diffs</text>
+  <text x="100" y="685" class="text">- Captures Stdout/Stderr</text>
+
+
+  <!-- COMPONENTS: CONTEXT ENGINE -->
+
+  <!-- Context Builder -->
+  <rect x="510" y="140" width="340" height="100" class="box"/>
+  <text x="530" y="170" class="label">Context Builder</text>
+  <text x="530" y="200" class="text">Compiles "Context Pack"</text>
+  <text x="530" y="225" class="text">(Budgeting + Ranking)</text>
+
+  <!-- Hard Refs -->
+  <rect x="510" y="320" width="340" height="120" class="box" style="stroke-width: 3;"/>
+  <text x="530" y="350" class="label">Hard References (Priority 1)</text>
+  <text x="530" y="380" class="text">- Stack Traces (File:Line)</text>
+  <text x="530" y="405" class="text">- Import Graph (AST)</text>
+
+  <!-- Soft Refs -->
+  <rect x="510" y="480" width="340" height="100" class="box" style="stroke-dasharray: 5 5;"/>
+  <text x="530" y="510" class="label">Soft References (Priority 2)</text>
+  <text x="530" y="540" class="text">- Lexical Search (grep)</text>
+  <text x="530" y="565" class="text">- Embeddings (Optional)</text>
+
+
+  <!-- COMPONENTS: EXECUTION -->
+
+  <!-- Driver -->
+  <rect x="940" y="140" width="380" height="100" class="box"/>
+  <text x="960" y="170" class="label">Agent Driver</text>
+  <text x="960" y="200" class="text">LLM (Codex / DeepSeek)</text>
+  <text x="960" y="225" class="text">Stateless: Inputs -> Diffs</text>
+
+  <!-- Workspace -->
+  <rect x="940" y="320" width="380" height="260" class="box"/>
+  <text x="960" y="350" class="label">Sandbox Workspace</text>
+  <text x="960" y="380" class="text">Docker Container</text>
+  <text x="960" y="420" class="text" style="font-weight: 700;">Files System (Git Repo)</text>
+  
+  <rect x="960" y="440" width="340" height="120" class="box" style="fill: #f9fafb;"/>
+  <text x="980" y="470" class="label">Lazy Validator</text>
+  <text x="980" y="500" class="text">1. Existing Tests (pytest)</text>
+  <text x="980" y="525" class="text">2. Smoke Checks (syntax)</text>
+
+
+  <!-- FLOW ARROWS -->
+
+  <!-- 1. Orchestrator -> Context Builder -->
+  <path d="M 420 190 L 510 190" class="arrow"/>
+  
+  <!-- 2. Context Builder -> Driver -->
+  <path d="M 850 190 L 940 190" class="arrow"/>
+  <text x="865" y="180" class="text" style="font-size: 12px; fill: #6b7280;">ContextPack</text>
+
+  <!-- 3. Driver -> Workspace -->
+  <path d="M 1130 240 L 1130 320" class="arrow"/>
+  <text x="1140" y="290" class="text" style="font-size: 12px; fill: #6b7280;">Edits</text>
+
+  <!-- 4. Workspace -> Observer (Evidence) -->
+  <path d="M 1130 580 L 1130 660 L 420 660" class="arrow"/>
+  <text x="650" y="650" class="text" style="font-size: 12px; fill: #6b7280;">Diffs + Logs</text>
+
+  <!-- 5. Observer -> Orchestrator (Feedback Loop) -->
+  <path d="M 250 600 L 250 280" class="arrow"/>
+  <text x="260" y="450" class="text" style="font-size: 12px; fill: #6b7280;">Status</text>
+
+  <!-- 6. Observer -> Hard Refs (Indexing) -->
+  <path d="M 420 660 L 680 660 L 680 440" class="arrow"/>
+  
+  <!-- 7. Hard Refs -> Context Builder -->
+  <path d="M 680 320 L 680 240" class="arrow"/>
+
+</svg>

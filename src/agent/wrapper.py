@@ -43,7 +43,7 @@ class VLLMAgent(AgentWrapper):
         # Placeholder: In real impl, this calls vllm.generate
         # and parses the output to detect tool usage.
         return {
-            "type": "reply", 
+            "type": "llm_reply", 
             "content": "placeholder response", 
             "logprobs": [-0.1, -0.5] # Mock logprobs
         }
@@ -52,7 +52,7 @@ class VLLMAgent(AgentWrapper):
         # Placeholder for Branching Probe
         return [
             {
-                "type": "reply", 
+                "type": "llm_reply", 
                 "content": f"branch_{i}", 
                 "logprobs": [-0.1 * i]
             } for i in range(n)

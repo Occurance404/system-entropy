@@ -6,9 +6,32 @@ __pycache__
 .pytest_cache
 .gemini
 nohup.out
+
+# OS / editor / office temp files
+.DS_Store
+.tmp*/
+.tmp_*/
+.~lock.*
+*~
+
 data/logs_real/
 data/logs_telephone/
 data/logs_terminal_bench/
+
+# Experiment outputs (keep repo clean)
+data/logs/
+data/logs_rescue/
+data/logs_hard_mode/
+data/run_artifacts/
+data/archive/
+data/sandbox_*/
+
+# Results are generated; keep only a few reference figures tracked
+data/results/*
+!data/results/entropy_comparison.png
+!data/results/experiment_summary.png
+!data/results/mini_swe_agent_metrics.png
+
 runs/
 terminal-bench/
 data/sandbox_task_1/

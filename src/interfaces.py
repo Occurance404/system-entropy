@@ -37,7 +37,7 @@ class SandboxConnectorProtocol(Protocol):
 class MetricServiceProtocol(Protocol):
     """Interface for metric calculation and state monitoring."""
     
-    def calculate_scr(self, branches: List[str]) -> float:
+    def calculate_scr(self, branches: List[str]) -> Optional[float]:
         """Calculates Semantic Collapse Ratio from text branches."""
         ...
         
@@ -45,7 +45,7 @@ class MetricServiceProtocol(Protocol):
         """Calculates Regressive Debt Index (Goal Deviance)."""
         ...
         
-    def calculate_entropy(self, logprobs: List[Any]) -> float:
+    def calculate_entropy(self, logprobs: List[Any]) -> Optional[float]:
         """Calculates entropy from logprobs."""
         ...
         

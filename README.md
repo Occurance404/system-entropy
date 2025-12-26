@@ -33,6 +33,7 @@ A research framework to study how LLM-based agents behave under non-stationary t
 - Real simulation with a remote model (uses `.env`):
   ```bash
   python simulate_real.py --scenario_id drug_filter_shock --max_steps 10
+  python simulate_real.py --scenario_id drug_filter_baseline --max_steps 50 --cheap  # disables probes + stops on validator success
   ```
 - Smoke test (plumbing/logging sanity):
   ```bash
@@ -44,17 +45,18 @@ A research framework to study how LLM-based agents behave under non-stationary t
   ```
 - TerminalBench harness (requires Docker, proxy):
   ```bash
-  ./run_tb_task.sh --task-id drug_filter_shock
+  ./run_tb_task.sh --task-id bank-trans-filter
   ```
 
 Logs land under `data/logs_rescue/`, `data/logs_hard_mode/`, or `data/logs_terminal_bench/`; sandboxes live under `data/sandbox_<scenario>/`.
+Per-run manifests and summaries land under `data/run_artifacts/<run_id>/`.
 
 ## Core Concepts
 - **Orchestrator** (`src/orchestrator/engine.py`): injects perturbations, runs branching probes, tracks panic counters, and can switch to a rescue agent.
 - **Agents**: `OpenAICompatibleAgent` (tool-calling, async probes) and `ScriptedAgent` (mock). Tools: read/write file, run shell, execute Python, stub web search.
 - **Metrics** (`src/services/metrics.py`):
   - Entropy (chosen-token surprisal), IGE `(H_pre - H_post)/token_cost` around tool calls.
-  - SCR (avg cosine distance of 5 probe branches via `all-MiniLM-L6-v2`; 0.0 if embeddings missing).
+  - SCR (avg cosine distance of 5 probe branches via `all-MiniLM-L6-v2`; `None` if embeddings missing).
   - RDI (cosine distance to scenario ground truth), compression ratio, cyclomatic complexity.
 - **Intervention logic**: entropy threshold 0.8 (or z-score >2), panic if 3 consecutive breaches; optional silent SCR probes via `probe_interval`.
 - **Proxy** (`src/llm_proxy.py`): FastAPI shim to the real model with optional shock injection; logs via `TerminalBenchMonitor`.
@@ -81,5 +83,12 @@ python smoke_test.py
 
 ## Notes
 - Generated artifacts (logs/results/sandboxes) are ignored via `.gitignore`.
-- Embedding model load failures degrade SCR/RDI to 0.0/None; check console for warnings.
-- For production-style runs, set `PROXY_AUTH_TOKEN` and start `src/llm_proxy.py` before agents.***
+- Embedding model load failures degrade SCR/RDI to `None`/`None`; check console for warnings.
+- For production-style runs, set `PROXY_AUTH_TOKEN` and start `src/llm_proxy.py` before agents.
+- If Docker is unavailable, set `SANDBOX_BACKEND=local` (or leave `auto` to fall back) to run sandboxes directly on your machine.
+- If a provider rejects `logprobs`, set `REQUEST_LOGPROBS=off` (default `auto` disables logprobs after the first rejection).
+
+## Safety Guards (V1)
+- Tool outputs are truncated + redacted before being appended to the agent history (prevents context flooding and accidental secret exposure).
+- `read_file` supports `"mode": "auto|full|outline"` and optional `start_line`/`end_line` for targeted expansion.
+- `write_file` blocks likely secret material by default; configure with `SECRETS_POLICY=block|warn|off`.

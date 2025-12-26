@@ -1,14 +1,21 @@
 import uuid
 import os
+import hashlib
+import json
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 from src.scenarios.definitions import SCENARIOS
 from src.scenarios.setup_ops import SCENARIO_SETUP_MAP
-from src.connectors.tb_connect import TerminalBenchConnector
+from src.scenarios.perturbation_ops import apply_perturbation_if_needed
+from src.scenarios.validation_ops import validate_scenario
+from src.connectors.local_connect import LocalSandboxConnector
 from src.services.metrics import EmbeddingMetricService
 from src.interfaces import AgentProtocol, MetricServiceProtocol
+from src.shared.constants import RUN_ARTIFACTS_DIR
+from src.shared.run_manifest import build_manifest, write_json
 from src.tools.registry import ToolRegistry
+from src.security.secrets import SecretScanner
 
 class Orchestrator:
     """
@@ -27,7 +34,12 @@ class Orchestrator:
                  run_id: str = None,
                  metrics_monitor: Any = None,
                  enable_intervention: bool = True,
-                 probe_interval: int = 0):
+                 probe_interval: int = 0,
+                 enable_validation: bool = False,
+                 validation_interval: int = 1,
+                 stop_on_success: bool = False,
+                 enable_branching_probes: bool = True,
+                 probe_branch_count: int = 5):
         
         self.scenario_id = scenario_id
         self.scenario = self._load_scenario(scenario_id)
@@ -49,6 +61,11 @@ class Orchestrator:
         self.metrics_monitor = metrics_monitor
         self.enable_intervention = enable_intervention
         self.probe_interval = probe_interval
+        self.enable_validation = enable_validation
+        self.validation_interval = max(1, int(validation_interval))
+        self.stop_on_success = stop_on_success
+        self.enable_branching_probes = enable_branching_probes
+        self.probe_branch_count = max(2, int(probe_branch_count))
         
         # Dependency Injection: Metric Service
         if metric_service:
@@ -71,14 +88,31 @@ class Orchestrator:
         self.z_score_threshold = 2.0 
         
         self.last_tool_context: Optional[Dict] = None
+        self.task_complete = False
         
         # Initialize Sandbox Connector
         if connector:
             self.connector = connector
         else:
-            print("Initializing TerminalBench Sandbox...")
-            self.connector = TerminalBenchConnector(scenario_id)
-            self.connector.start()
+            backend = (os.getenv("SANDBOX_BACKEND") or "auto").strip().lower()
+            if backend in ("local", "host"):
+                print("Initializing Local Sandbox (no Docker)...")
+                self.connector = LocalSandboxConnector(self.sandbox_path)
+                self.connector.start()
+            else:
+                # Default/auto: prefer Docker, but fall back to local if Docker is unavailable.
+                try:
+                    from src.connectors.tb_connect import TerminalBenchConnector  # lazy import (docker optional)
+
+                    print("Initializing TerminalBench Sandbox (Docker)...")
+                    self.connector = TerminalBenchConnector(scenario_id)
+                    self.connector.start()
+                except Exception as e:
+                    if backend in ("docker", "terminalbench"):
+                        raise
+                    print(f"WARNING: Docker sandbox unavailable ({e}). Falling back to LocalSandboxConnector.")
+                    self.connector = LocalSandboxConnector(self.sandbox_path)
+                    self.connector.start()
             
         # RDI Series Tracking
         self.rdi_series: List[Optional[float]] = []
@@ -92,6 +126,33 @@ class Orchestrator:
         # Initialize History with Prompt
         if self.scenario.get("initial_prompt"):
              self.history.append({"role": "user", "content": self.scenario.get("initial_prompt")})
+
+        # Run artifacts (manifest, summaries, plots) live under data/run_artifacts/<run_id>/.
+        self.run_dir = os.path.join(RUN_ARTIFACTS_DIR, self.run_id)
+        try:
+            os.makedirs(self.run_dir, exist_ok=True)
+            log_file = getattr(self.metrics_monitor, "log_file", None) if self.metrics_monitor else None
+            write_json(
+                os.path.join(self.run_dir, "manifest.json"),
+                build_manifest(
+                    run_id=self.run_id,
+                    scenario_id=self.scenario_id,
+                    model_name=getattr(self.agent, "model_name", "unknown"),
+                    sandbox_path=self.sandbox_path,
+                    log_file=log_file,
+                    config={
+                        "enable_intervention": self.enable_intervention,
+                        "probe_interval": self.probe_interval,
+                        "enable_validation": self.enable_validation,
+                        "validation_interval": self.validation_interval,
+                        "stop_on_success": self.stop_on_success,
+                        "enable_branching_probes": self.enable_branching_probes,
+                        "probe_branch_count": self.probe_branch_count,
+                    },
+                ),
+            )
+        except Exception as e:
+            print(f"Orchestrator Warning: Failed to write run manifest: {e}")
         
     def switch_agent(self, new_agent: AgentProtocol):
         """Swaps the current agent."""
@@ -128,6 +189,17 @@ class Orchestrator:
         """
         Advances the simulation by one step.
         """
+        if self.task_complete:
+            return {
+                "run_id": self.run_id,
+                "scenario_id": self.scenario_id,
+                "step_index": self.step_count,
+                "model": getattr(self.agent, "model_name", "unknown"),
+                "event_type": "task_complete",
+                "task_complete": True,
+                "timestamp": datetime.now().isoformat(),
+            }
+
         self.step_count += 1
         
         step_metrics = {
@@ -144,15 +216,25 @@ class Orchestrator:
             "event_type": None,
             "panic_counter": self.panic_counter,
             "tool": None,
+            "task_complete": None,
+            "validation_passed": None,
+            "validation_score": None,
+            "validation_details": None,
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "total_tokens": None,
             "timestamp": datetime.now().isoformat()
         }
 
         # 1. Check for Periodic SCR Probe (Silent)
-        if self.probe_interval > 0 and self.step_count % self.probe_interval == 0:
+        if (
+            self.enable_branching_probes
+            and self.probe_interval > 0
+            and self.step_count % self.probe_interval == 0
+        ):
             # Only probe if no perturbation is about to happen (priority to perturbation)
             if not self._check_perturbation_triggers():
                  probe_results = self._run_branching_probe(perturbation_instruction=None)
-                 step_metrics["scr"] = probe_results["scr"]
                  if self.metrics_monitor:
                      self.metrics_monitor.log_step(
                         run_id=self.run_id,
@@ -161,7 +243,8 @@ class Orchestrator:
                         step_index=self.step_count,
                         event_type="periodic_probe",
                         prompt="<silent_probe>",
-                        scr=step_metrics["scr"],
+                        scr=probe_results.get("scr"),
+                        branches_count=len(probe_results.get("branches") or []),
                         panic_counter=self.panic_counter
                      )
 
@@ -172,10 +255,19 @@ class Orchestrator:
             self.stability_counter = 0
             
             step_metrics["event_type"] = "perturbation_triggered"
+
+            # Apply any sandbox mutation that corresponds to this perturbation.
+            apply_perturbation_if_needed(self.scenario_id, self.step_count, self.sandbox_path)
             
-            # Probe using Service
-            probe_results = self._run_branching_probe(perturbation_instruction)
-            step_metrics["scr"] = probe_results["scr"]
+            if self.enable_branching_probes:
+                # Probe using Service
+                probe_results = self._run_branching_probe(perturbation_instruction)
+                step_metrics["scr"] = probe_results["scr"]
+            else:
+                probe_results = {"scr": None, "branches": []}
+
+            # Persist the requirement change so the agent sees it on subsequent steps.
+            self.history.append({"role": "user", "content": perturbation_instruction})
             
             self.rdi_series.append(None)
             
@@ -188,6 +280,7 @@ class Orchestrator:
                     event_type="perturbation_triggered",
                     prompt=perturbation_instruction,
                     scr=step_metrics["scr"],
+                    branches_count=len(probe_results.get("branches") or []),
                     panic_counter=self.panic_counter
                 )
 
@@ -195,6 +288,12 @@ class Orchestrator:
         
         # Get Agent's next action
         agent_action_intent = self.agent.get_next_action(self.history)
+
+        usage = agent_action_intent.get("usage")
+        if isinstance(usage, dict):
+            step_metrics["prompt_tokens"] = usage.get("prompt_tokens")
+            step_metrics["completion_tokens"] = usage.get("completion_tokens")
+            step_metrics["total_tokens"] = usage.get("total_tokens")
         
         # Calculate Entropy via Service
         current_entropy = self.metric_service.calculate_entropy(agent_action_intent.get("logprobs", []))
@@ -204,8 +303,9 @@ class Orchestrator:
         if self.last_tool_context:
             h_pre = self.last_tool_context['h_pre']
             token_cost = self.last_tool_context['token_cost']
-            ige = self.metric_service.calculate_ige(h_pre, current_entropy, token_cost)
-            step_metrics["ige"] = ige
+            if h_pre is not None and current_entropy is not None:
+                ige = self.metric_service.calculate_ige(h_pre, current_entropy, token_cost)
+                step_metrics["ige"] = ige
             self.last_tool_context = None
             
         # Calculate RDI via Service
@@ -217,7 +317,7 @@ class Orchestrator:
         self.rdi_series.append(step_metrics["rdi"])
         
         # Intervention Check
-        if self._check_panic(current_entropy):
+        if current_entropy is not None and self._check_panic(current_entropy):
             step_metrics["event_type"] = "panic_detected" # Log it even if we don't intervene
             step_metrics["panic_counter"] = self.panic_counter
             self.recovered_at_step = None
@@ -257,7 +357,11 @@ class Orchestrator:
             tool_args = agent_action_intent["content"]
             step_metrics["tool"] = tool_name
             
-            token_count = len(agent_action_intent.get("logprobs", []))
+            token_count = None
+            if isinstance(usage, dict):
+                token_count = usage.get("completion_tokens") or usage.get("total_tokens")
+            if not isinstance(token_count, int) or token_count <= 0:
+                token_count = len(agent_action_intent.get("logprobs", []))
             if token_count == 0:
                 token_count = len(str(tool_args)) // 4 + 1
             self.last_tool_context = {
@@ -269,26 +373,31 @@ class Orchestrator:
             step_metrics["event_type"] = "tool_execution"
             step_metrics["cbf"] = cbf_value
             
-            self.history.append({"role": "user", "content": f"Used tool: {tool_name} with args: {tool_args}"})
-            self.history.append({"role": "tool_output", "content": tool_result})
+            safe_args = self._format_tool_args_for_history(tool_name, tool_args)
+            self.history.append({"role": "user", "content": f"Used tool: {tool_name} with args: {safe_args}"})
+            self.history.append({"role": "tool_output", "content": SecretScanner.redact(str(tool_result))})
             
         elif agent_action_intent["type"] == "llm_reply":
             step_metrics["event_type"] = "llm_reply"
             cr = self.metric_service.calculate_compression_ratio(agent_action_intent["content"])
             step_metrics["compression_ratio"] = cr
-            self.history.append({"role": "user", "content": agent_action_intent["content"]})
+            self.history.append({"role": "assistant", "content": agent_action_intent["content"]})
         else:
              step_metrics["event_type"] = "unknown_action"
 
+        # Optional scenario validation (benchmark-style ground truth).
+        if self.enable_validation and (self.step_count % self.validation_interval == 0):
+            validation = validate_scenario(self.scenario_id, self.sandbox_path)
+            if validation is not None:
+                step_metrics["validation_passed"] = bool(validation.passed)
+                step_metrics["validation_score"] = validation.score
+                step_metrics["validation_details"] = validation.details
+                if validation.passed and self.stop_on_success:
+                    step_metrics["task_complete"] = True
+                    self.task_complete = True
+
         # Logging
         if self.metrics_monitor:
-            def branching_wrapper():
-                 # Only probe if SCR wasn't already calculated this step
-                 if step_metrics["scr"] is not None:
-                     return [] 
-                 branches = self.agent.generate_multiple(self.history, n=5)
-                 return [b.get("content", "") for b in branches]
-
             self.metrics_monitor.log_step(
                 run_id=self.run_id,
                 scenario_id=self.scenario_id,
@@ -304,7 +413,14 @@ class Orchestrator:
                 panic_counter=self.panic_counter,
                 tool=step_metrics["tool"],
                 compression_ratio=step_metrics["compression_ratio"],
-                branching_func=branching_wrapper 
+                task_complete=step_metrics["task_complete"],
+                validation_passed=step_metrics["validation_passed"],
+                validation_score=step_metrics["validation_score"],
+                validation_details=step_metrics["validation_details"],
+                prompt_tokens=step_metrics["prompt_tokens"],
+                completion_tokens=step_metrics["completion_tokens"],
+                total_tokens=step_metrics["total_tokens"],
+                branching_func=None 
             )
 
         if tool_result:
@@ -325,11 +441,16 @@ class Orchestrator:
             # Silent probe: Branch from current history
             probe_history = list(self.history)
 
-        branches = self.agent.generate_multiple(probe_history, n=5)
+        branches = self.agent.generate_multiple(probe_history, n=self.probe_branch_count)
         branch_texts = [b.get("content", "") for b in branches]
+        probe_total_tokens = 0
+        for b in branches:
+            usage = b.get("usage")
+            if isinstance(usage, dict) and isinstance(usage.get("total_tokens"), int):
+                probe_total_tokens += usage["total_tokens"]
         
         scr = self.metric_service.calculate_scr(branch_texts)
-        return {"scr": scr, "branches": branch_texts}
+        return {"scr": scr, "branches": branch_texts, "probe_total_tokens": probe_total_tokens}
 
     def _execute_tool_and_measure(self, action_intent: Dict) -> tuple:
         """
@@ -345,6 +466,30 @@ class Orchestrator:
             return result, cbf, None
         else:
             return f"Unknown tool: {tool_name}", None, None
+
+    def _format_tool_args_for_history(self, tool_name: str, tool_args: Any) -> str:
+        """
+        Prevents context poisoning + secret leakage by never embedding large blobs
+        (e.g., write_file content) directly into the chat history.
+        """
+        if not isinstance(tool_args, dict):
+            return SecretScanner.redact(str(tool_args))
+
+        safe: Dict[str, Any] = {}
+        for key, value in tool_args.items():
+            if isinstance(value, str) and len(value) > 200:
+                digest = hashlib.sha256(value.encode("utf-8", errors="replace")).hexdigest()[:12]
+                safe[key] = f"<{len(value)} chars sha256={digest}>"
+            else:
+                safe[key] = value
+
+        # Extra hardening for write_file
+        if tool_name == "write_file" and isinstance(tool_args.get("content"), str):
+            content = tool_args["content"]
+            digest = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()[:12]
+            safe["content"] = f"<{len(content)} chars sha256={digest}>"
+
+        return SecretScanner.redact(json.dumps(safe, ensure_ascii=False, sort_keys=True))
 
     def _check_panic(self, entropy: float) -> bool:
         triggered = False

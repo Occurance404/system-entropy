@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import MagicMock
 from src.orchestrator.engine import Orchestrator
-from src.monitor.probe import StateMonitor
 from src.scenarios.definitions import SCENARIOS
 
 class ScriptedAgent:
@@ -30,6 +29,12 @@ class TestIntegration(unittest.TestCase):
         # Use the first scenario
         scenario = SCENARIOS[0] 
         agent = ScriptedAgent(scenario.golden_path)
+        metric_service = MagicMock()
+        metric_service.calculate_entropy.return_value = 0.5
+        metric_service.calculate_scr.return_value = 0.1
+        metric_service.calculate_rdi.return_value = 0.0
+        metric_service.calculate_compression_ratio.return_value = 0.5
+        metric_service.calculate_ige.side_effect = lambda h_pre, h_post, cost: ((h_pre - h_post) / cost) if cost else 0.0
         
         # Mock connector
         mock_connector = MagicMock()
@@ -45,6 +50,7 @@ class TestIntegration(unittest.TestCase):
         orchestrator = Orchestrator(
             scenario_id=scenario.id, 
             agent=agent, 
+            metric_service=metric_service,
             metrics_monitor=mock_metrics_monitor,
             connector=mock_connector
         )

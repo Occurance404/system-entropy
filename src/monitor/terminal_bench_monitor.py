@@ -1,94 +1,43 @@
 import os
 import json
 import math
+import uuid
 from datetime import datetime
-from typing import List, Optional, Any
-from sentence_transformers import SentenceTransformer
-from scipy.spatial.distance import cosine
+from typing import Optional, Any
 import numpy as np
 
 from src.shared.constants import LOG_SCHEMA, LOGS_DIR
+from src.services.metrics import EmbeddingMetricService
 
 class TerminalBenchMonitor:
     def __init__(self):
-        self.log_file = os.path.join(LOGS_DIR, f"tb_monitor_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jsonl")
+        self.log_file = os.path.join(
+            LOGS_DIR, f"tb_monitor_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jsonl"
+        )
         os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+
+        self._default_run_id = str(uuid.uuid4())
+        self._default_scenario_id = os.getenv("TB_TASK_ID") or "unknown"
+        self._auto_step_index = 0
         
-        # Load embedding model for SCR (Semantic Collapse Ratio)
+        # Use the Unified Singleton Metric Service
         try:
-            print("Initializing Monitor: Loading embedding model...")
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            print("Monitor: Embedding model loaded.")
+            print("Initializing Monitor: Linking to MetricService...")
+            self.metric_service = EmbeddingMetricService()
         except Exception as e:
-            print(f"Monitor Error: Failed to load embedding model: {e}")
-            self.embedding_model = None
-
-    def calculate_entropy(self, token_distributions):
-        """
-        Calculates Shannon Entropy from a list of Top-K token distributions.
-        Fixes Scientific Validity: Uses sum(-p * log(p)) over the normalized Top-K distribution.
-        Distinguishes between 'Certain' (Peaked) and 'Confused' (Flat) states.
-        """
-        if not token_distributions:
-            return 0.0
-        
-        total_entropy = 0.0
-        count = 0
-        
-        for logprobs in token_distributions:
-            if not logprobs: continue
-            
-            # 1. Convert logprobs to probabilities
-            # Handle potential -inf or very small numbers
-            probs = []
-            for lp in logprobs:
-                if lp > -100: # localized truncation for underflow
-                    probs.append(math.exp(lp))
-                else:
-                    probs.append(0.0)
-            
-            sum_p = sum(probs)
-            if sum_p <= 0: continue
-            
-            # 2. Normalize to create a valid probability distribution for Top-K
-            # This approximates the "Local Entropy" given the choice is within Top-K
-            norm_probs = [p / sum_p for p in probs]
-            
-            # 3. Calculate Shannon Entropy: H = -sum(p * ln(p))
-            h = 0.0
-            for p in norm_probs:
-                if p > 0:
-                    h -= p * math.log(p)
-            
-            total_entropy += h
-            count += 1
-            
-        # Average per token to be length-invariant
-        return total_entropy / count if count > 0 else 0.0
-
-    def calculate_scr(self, texts):
-        """Calculates Semantic Collapse Ratio (Average Pairwise Cosine Distance)."""
-        if not self.embedding_model or len(texts) < 2:
-            return 0.0
-        
-        embeddings = self.embedding_model.encode(texts)
-        distances = []
-        for i in range(len(embeddings)):
-            for j in range(i + 1, len(embeddings)):
-                dist = cosine(embeddings[i], embeddings[j])
-                distances.append(dist)
-        
-        return float(np.mean(distances)) if distances else 0.0
+            print(f"Monitor Error: Failed to link MetricService: {e}")
+            self.metric_service = None
 
     def log_step(self, 
-                 run_id: str,
-                 scenario_id: str,
-                 model_name: str,
-                 step_index: int,
-                 event_type: str,
+                 run_id: Optional[str] = None,
+                 scenario_id: Optional[str] = None,
+                 model_name: str = "unknown",
+                 step_index: Optional[int] = None,
+                 event_type: str = "llm_call",
                  prompt: str = "",
+                 messages: Optional[list] = None,
                  response_obj: Optional[dict] = None,
-                 current_entropy: float = 0.0,
+                 current_entropy: Optional[float] = None,
                  ige: Optional[float] = None,
                  scr: Optional[float] = None,
                  cbf: Optional[int] = None,
@@ -96,6 +45,14 @@ class TerminalBenchMonitor:
                  panic_counter: int = 0,
                  tool: Optional[str] = None,
                  compression_ratio: Optional[float] = None,
+                 task_complete: Optional[bool] = None,
+                 validation_passed: Optional[bool] = None,
+                 validation_score: Optional[float] = None,
+                 validation_details: Optional[str] = None,
+                 prompt_tokens: Optional[int] = None,
+                 completion_tokens: Optional[int] = None,
+                 total_tokens: Optional[int] = None,
+                 branches_count: Optional[int] = None,
                  branching_func=None):
         """
         Main logging hook.
@@ -103,15 +60,39 @@ class TerminalBenchMonitor:
         branching_func: A callable that generates N divergent responses (for SCR).
         """
         try:
-            # If response_obj is provided, we can refine entropy calculation
-            # But ideally, the caller passes 'current_entropy' already calculated
-            
-            # Branching Probe Logic (if requested and function provided)
+            if run_id is None:
+                run_id = self._default_run_id
+            if scenario_id is None:
+                scenario_id = self._default_scenario_id
+            if step_index is None:
+                self._auto_step_index += 1
+                step_index = self._auto_step_index
+
+            # Branching Probe Logic (Fallback if SCR not provided by Orchestrator)
             branches = []
-            if branching_func and scr is None:
-                print("Monitor: Triggering Branching Probe...")
+            scr_probe_event_types = {"perturbation_triggered", "periodic_probe", "proxy_probe", "proxy_shock_injected"}
+            if branching_func and scr is None and self.metric_service and event_type in scr_probe_event_types:
+                # Only trigger if explicitly requested and missing
+                # print("Monitor: Triggering Branching Probe (Fallback)...")
                 branches = branching_func() 
-                scr = self.calculate_scr(branches)
+                scr = self.metric_service.calculate_scr(branches)
+
+            if isinstance(current_entropy, float) and (math.isnan(current_entropy) or math.isinf(current_entropy)):
+                current_entropy = None
+            if isinstance(scr, float) and (math.isnan(scr) or math.isinf(scr)):
+                scr = None
+            if isinstance(ige, float) and (math.isnan(ige) or math.isinf(ige)):
+                ige = None
+            if isinstance(rdi, float) and (math.isnan(rdi) or math.isinf(rdi)):
+                rdi = None
+            if isinstance(compression_ratio, float) and (
+                math.isnan(compression_ratio) or math.isinf(compression_ratio)
+            ):
+                compression_ratio = None
+            if isinstance(validation_score, float) and (
+                math.isnan(validation_score) or math.isinf(validation_score)
+            ):
+                validation_score = None
 
             # Construct Log Entry matching LOG_SCHEMA
             entry = {
@@ -129,15 +110,19 @@ class TerminalBenchMonitor:
                 "panic_counter": panic_counter,
                 "tool": tool,
                 "compression_ratio": compression_ratio,
-                # Extra debug info allowed
+                "task_complete": task_complete,
+                "validation_passed": validation_passed,
+                "validation_score": validation_score,
+                "validation_details": (validation_details[:500] if isinstance(validation_details, str) else None),
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
                 "prompt_snippet": prompt[:100] if prompt else "",
-                "branches_count": len(branches)
+                "branches_count": branches_count if isinstance(branches_count, int) else len(branches)
             }
             
             with open(self.log_file, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-                
-            # print(f"Monitor: Logged step {step_index}. Entropy: {current_entropy:.4f}")
 
         except Exception as e:
             print(f"Monitor Error during logging: {e}")

@@ -28,6 +28,21 @@ RESCUE_BASE_URL="https://api.openai.com/v1"
 RESCUE_MODEL_NAME="gpt-4"
 ```
 
+### No-Block Toggles (Recommended)
+
+If you want the framework to “just run” across providers with different feature support:
+
+```bash
+# Avoid Docker bottlenecks (runs sandboxes on your machine).
+export SANDBOX_BACKEND=local   # or "auto" (default) to fall back automatically
+
+# Avoid logprob bottlenecks (entropy becomes optional).
+export REQUEST_LOGPROBS=auto   # auto|off|on
+
+# Optional: do not block writes that look like secrets (be careful).
+export SECRETS_POLICY=warn     # block|warn|off
+```
+
 ## 3. Running Experiments
 
 We support two modes: **Baseline** (Observation) and **Rescue** (Intervention).
@@ -56,6 +71,7 @@ python3 run_rescue_experiment.py \
 ## 4. Viewing Results
 
 Logs are saved to `data/logs_rescue/`.
+For orchestrator-based runs that use the unified monitor, per-run artifacts (manifest + summary) are saved under `data/run_artifacts/<run_id>/`.
 
 Each log file is a JSONL file containing step-by-step metrics:
 - **SCR (Semantic Collapse Ratio):** Measures confusion.
@@ -71,4 +87,42 @@ grep "perturbation_triggered" data/logs_rescue/latest_log.jsonl
 
 # See when panic triggered an intervention
 grep "intervention" data/logs_rescue/latest_log.jsonl
+```
+
+## 5. Cheap Mode (Low-Credit Runs)
+
+If you are low on API credits, prefer runs that disable expensive branching probes and stop early when the validator reports success:
+
+```bash
+python run_hard_mode.py --scenario_id drug_filter_baseline --max_steps 50 --cheap
+python simulate_real.py --scenario_id drug_filter_baseline --max_steps 50 --cheap
+```
+
+## 6. Benchmark Sweeps (Paper Tables)
+
+For multi-model sweeps with deterministic validators, use `run_benchmark.py` + `analyze_benchmark.py`.
+
+1) Create a models file:
+- Start from `benchmarks/models.paper.template.json` and replace the model IDs.
+- Put keys in `.env` (recommended): `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, etc.
+ - Ensure Docker is running and your user can access it (TerminalBench sandbox uses Docker).
+
+2) (Optional) Probe provider capabilities (logprobs + tools):
+```bash
+python check_model_capabilities.py --models benchmarks/models.paper.template.json
+```
+
+3) Run a small sweep (cheap-ish defaults):
+```bash
+python run_benchmark.py \
+  --models benchmarks/models.paper.template.json \
+  --suite benchmarks/suite_v1.json \
+  --repeats 1 \
+  --probe-mode shock \
+  --probe-branches 3
+```
+
+4) Aggregate into a summary CSV:
+```bash
+python analyze_benchmark.py --results data/results/benchmark_v1_<timestamp>.csv
 ```

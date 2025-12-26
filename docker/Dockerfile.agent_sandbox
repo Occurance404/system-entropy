@@ -1,0 +1,54 @@
+# Inherit from the Data Science image (or just base python)
+FROM python:3.11-slim
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install "Crazy Stuff" tools (System Utilities for Agentic Tasks)
+RUN apt-get update && apt-get install -y \
+    # Basic Utilities
+    git \
+    curl \
+    wget \
+    zip \
+    unzip \
+    jq \
+    vim \
+    nano \
+    # Network Debugging
+    iputils-ping \
+    dnsutils \
+    net-tools \
+    # Process Management
+    procps \
+    # Build Tools (for compiling random C libs the agent might download)
+    build-essential \
+    cmake \
+    libffi-dev \
+    libssl-dev \
+    # Fun Extras
+    ffmpeg \
+    imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install common Python libs for Agentic work (beyond just ML)
+RUN pip install --no-cache-dir \
+    requests \
+    beautifulsoup4 \
+    lxml \
+    yfinance \
+    duckduckgo-search \
+    wikipedia \
+    pillow \
+    numpy \
+    pandas \
+    matplotlib
+
+# Set working directory
+WORKDIR /workspace
+
+# Create a non-root user? 
+# NO. The user explicitly asked for "all permission". 
+# Root access in the container is desired for "crazy stuff".
+
+CMD ["tail", "-f", "/dev/null"]

@@ -4,20 +4,18 @@ import numpy as np
 from unittest.mock import MagicMock
 from src.orchestrator.engine import Orchestrator
 from src.agent.wrapper import VLLMAgent
-from src.monitor.probe import StateMonitor
 from src.scenarios.definitions import SCENARIOS
+from src.scenarios.schema import Perturbation
 
 @pytest.fixture
-def mock_monitor():
-    monitor = StateMonitor()
-    # Mock some methods if needed for orchestrator tests
-    monitor.calculate_entropy_from_logprobs = lambda logprobs: 0.5 # Constant mock entropy
-    monitor.calculate_semantic_collapse_ratio = lambda embeddings: 0.1 # Constant mock SCR
-    monitor.calculate_information_gain_efficiency = lambda h_pre, h_post, cost: 0.05 # Constant mock IGE
-    monitor.measure_cyclomatic_complexity = lambda code: 1
-    monitor.check_goal_deviance = lambda current, truth: 0.0
-    monitor.calculate_compression_ratio = lambda text: 0.5
-    return monitor
+def mock_metric_service():
+    svc = MagicMock()
+    svc.calculate_entropy.return_value = 0.5
+    svc.calculate_scr.return_value = 0.1
+    svc.calculate_rdi.return_value = 0.0
+    svc.calculate_compression_ratio.return_value = 0.5
+    svc.calculate_ige.side_effect = lambda h_pre, h_post, cost: ((h_pre - h_post) / cost) if cost else 0.0
+    return svc
 
 @pytest.fixture
 def mock_connector():
@@ -35,29 +33,48 @@ def mock_agent():
     agent.generate_multiple = lambda history, n: [{"type": "llm_reply", "content": f"branch_{i}", "logprobs": [math.log(0.5)]} for i in range(n)]
     return agent
 
-def test_orchestrator_init_and_scenario_load(mock_agent, mock_monitor, mock_connector):
+def test_orchestrator_init_and_scenario_load(mock_agent, mock_metric_service, mock_connector):
     # Test loading a known scenario
-    orch = Orchestrator(scenario_id="drug_filter_baseline", agent=mock_agent, monitor=mock_monitor, connector=mock_connector)
+    orch = Orchestrator(
+        scenario_id="drug_filter_baseline",
+        agent=mock_agent,
+        metric_service=mock_metric_service,
+        connector=mock_connector,
+    )
     assert orch.scenario["id"] == "drug_filter_baseline"
     assert orch.step_count == 0
     assert orch.agent == mock_agent
-    assert orch.monitor == mock_monitor
 
     # Test loading a non-existent scenario
     with pytest.raises(ValueError, match="Scenario with ID 'non_existent' not found."):
-        Orchestrator(scenario_id="non_existent", agent=mock_agent, monitor=mock_monitor, connector=mock_connector)
+        Orchestrator(
+            scenario_id="non_existent",
+            agent=mock_agent,
+            metric_service=mock_metric_service,
+            connector=mock_connector,
+        )
 
-def test_orchestrator_step_no_perturbation(mock_agent, mock_monitor, mock_connector):
-    orch = Orchestrator(scenario_id="drug_filter_baseline", agent=mock_agent, monitor=mock_monitor, connector=mock_connector)
+def test_orchestrator_step_no_perturbation(mock_agent, mock_metric_service, mock_connector):
+    orch = Orchestrator(
+        scenario_id="drug_filter_baseline",
+        agent=mock_agent,
+        metric_service=mock_metric_service,
+        connector=mock_connector,
+    )
     result = orch.step()
     assert result["type"] == "llm_reply" # Assuming mock agent always returns llm_reply
 
-def test_orchestrator_perturbation_trigger_and_probe(mock_agent, mock_monitor, mock_connector):
+def test_orchestrator_perturbation_trigger_and_probe(mock_agent, mock_metric_service, mock_connector):
     # Temporarily modify scenario to trigger perturbation at step 1
-    original_perturbations = SCENARIOS[1]["perturbations"]
-    SCENARIOS[1]["perturbations"] = [{"step": 1, "type": "test", "instruction": "Test perturbation"}]
+    original_perturbations = SCENARIOS[1].perturbations
+    SCENARIOS[1].perturbations = [Perturbation(step=1, type="test", instruction="Test perturbation")]
 
-    orch = Orchestrator(scenario_id="drug_filter_shock", agent=mock_agent, monitor=mock_monitor, connector=mock_connector)
+    orch = Orchestrator(
+        scenario_id="drug_filter_shock",
+        agent=mock_agent,
+        metric_service=mock_metric_service,
+        connector=mock_connector,
+    )
     orch.step_count = 0 # Ensure perturbation triggers at step 1
     result = orch.step()
     
@@ -67,12 +84,17 @@ def test_orchestrator_perturbation_trigger_and_probe(mock_agent, mock_monitor, m
     assert "scr" in result["probe_metrics"]
     
     # Restore original perturbations
-    SCENARIOS[1]["perturbations"] = original_perturbations
+    SCENARIOS[1].perturbations = original_perturbations
 
-def test_orchestrator_hysteresis_intervention(mock_agent, mock_monitor, mock_connector, capsys):
+def test_orchestrator_hysteresis_intervention(mock_agent, mock_metric_service, mock_connector, capsys):
     # Set high entropy threshold and ensure mock agent provides high entropy
-    mock_monitor.calculate_entropy_from_logprobs = lambda logprobs: 1.0 # High entropy
-    orch = Orchestrator(scenario_id="drug_filter_baseline", agent=mock_agent, monitor=mock_monitor, connector=mock_connector)
+    mock_metric_service.calculate_entropy.return_value = 1.0
+    orch = Orchestrator(
+        scenario_id="drug_filter_baseline",
+        agent=mock_agent,
+        metric_service=mock_metric_service,
+        connector=mock_connector,
+    )
     orch.entropy_threshold = 0.5
     orch.panic_threshold = 3
 

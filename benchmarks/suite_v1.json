@@ -1,0 +1,11 @@
+{
+  "suite_id": "v1",
+  "description": "Small non-stationary suite with deterministic validators.",
+  "scenarios": [
+    { "scenario_id": "drug_filter_baseline", "max_steps": 30 },
+    { "scenario_id": "drug_filter_shock", "max_steps": 60 },
+    { "scenario_id": "data_pipeline_baseline", "max_steps": 30 },
+    { "scenario_id": "data_pipeline_shock", "max_steps": 60 }
+  ]
+}
+

@@ -1,0 +1,13 @@
+{
+  "suite_id": "v2",
+  "description": "Expanded non-stationary suite (adds file organization baseline/shock).",
+  "scenarios": [
+    { "scenario_id": "drug_filter_baseline", "max_steps": 30 },
+    { "scenario_id": "drug_filter_shock", "max_steps": 60 },
+    { "scenario_id": "data_pipeline_baseline", "max_steps": 30 },
+    { "scenario_id": "data_pipeline_shock", "max_steps": 60 },
+    { "scenario_id": "file_organizer_baseline", "max_steps": 25 },
+    { "scenario_id": "file_organizer_shock", "max_steps": 40 }
+  ]
+}
+

@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="820" viewBox="0 0 1400 820" role="img" aria-label="Context-aware autonomous developer architecture (orchestrator-driven)">
+  <defs>
+    <style>
+      .box { fill: #ffffff; stroke: #111827; stroke-width: 2; rx: 14; }
+      .subbox { fill: #f9fafb; stroke: #111827; stroke-width: 1.5; rx: 12; }
+      .optional { fill: #ffffff; stroke: #6b7280; stroke-width: 1.5; stroke-dasharray: 6 5; rx: 12; }
+      .title { font: 700 18px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #111827; }
+      .label { font: 600 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #111827; }
+      .text { font: 400 13px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #111827; }
+      .muted { fill: #6b7280; }
+      .arrow { stroke: #111827; stroke-width: 2; fill: none; marker-end: url(#arrowHead); }
+      .arrow-muted { stroke: #6b7280; stroke-width: 2; fill: none; marker-end: url(#arrowHeadMuted); }
+      .chip { fill: #eef2ff; stroke: #4f46e5; stroke-width: 1.5; rx: 999; }
+      .chipText { font: 600 12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; fill: #3730a3; }
+    </style>
+    <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111827"/>
+    </marker>
+    <marker id="arrowHeadMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <!-- Header -->
+  <text x="40" y="42" class="title">Context-Aware Autonomous Developer (Orchestrator-Driven)</text>
+  <text x="40" y="68" class="text muted">Driver can be Codex CLI / Gemini CLI / your own agent. Orchestrator owns memory, context packing, validation, and recovery.</text>
+
+  <!-- User -->
+  <rect x="40" y="110" width="260" height="90" class="box"/>
+  <text x="60" y="145" class="label">User Input</text>
+  <text x="60" y="170" class="text">Prompt + files/dataset</text>
+
+  <!-- Orchestrator -->
+  <rect x="330" y="95" width="510" height="235" class="box"/>
+  <text x="350" y="130" class="label">Orchestrator / Supervisor</text>
+  <text x="350" y="155" class="text">- Builds ContextSnapshot under budget</text>
+  <text x="350" y="175" class="text">- Runs validators and logs evidence</text>
+  <text x="350" y="195" class="text">- Detects thrash → wipe / rollback / escalate</text>
+  <text x="350" y="215" class="text">- Keeps agent stateless (STATE + EVENTS)</text>
+
+  <!-- Context pack builder -->
+  <rect x="350" y="240" width="220" height="75" class="subbox"/>
+  <text x="365" y="270" class="label">Context Pack</text>
+  <text x="365" y="292" class="text">Ranker + budgeter</text>
+
+  <!-- Supervisor actions -->
+  <rect x="590" y="240" width="230" height="75" class="subbox"/>
+  <text x="605" y="270" class="label">Recovery</text>
+  <text x="605" y="292" class="text">Hard wipe, rollback, swap driver</text>
+
+  <!-- Memory store -->
+  <rect x="40" y="250" width="260" height="160" class="box"/>
+  <text x="60" y="285" class="label">Memory Store</text>
+  <text x="60" y="310" class="text">STATE.json (goal, hypothesis)</text>
+  <text x="60" y="332" class="text">EVENTS.jsonl (actions, diffs)</text>
+  <text x="60" y="354" class="text">ARTIFACTS (logs, traces)</text>
+
+  <!-- Evidence / hard refs -->
+  <rect x="40" y="440" width="260" height="200" class="subbox"/>
+  <text x="60" y="470" class="label">Hard References</text>
+  <text x="60" y="495" class="text">- failing test output</text>
+  <text x="60" y="515" class="text">- stack traces (file:line)</text>
+  <text x="60" y="535" class="text">- recent diffs + touched files</text>
+  <text x="60" y="555" class="text">- import edges (AST/regex)</text>
+  <text x="60" y="585" class="text muted">Always prioritized over semantic search</text>
+
+  <!-- Optional semantic tools -->
+  <rect x="330" y="360" width="260" height="130" class="optional"/>
+  <text x="350" y="392" class="label muted">Optional: Semantic Tools</text>
+  <text x="350" y="418" class="text muted">Embedding search / SCR probes</text>
+  <text x="350" y="440" class="text muted">Tree-sitter parsing (V2)</text>
+  <text x="350" y="462" class="text muted">LSP (V3+ only)</text>
+
+  <!-- Ranker -->
+  <rect x="620" y="360" width="220" height="130" class="box"/>
+  <text x="640" y="392" class="label">Ranker</text>
+  <text x="640" y="418" class="text">Hard refs &gt; lexical</text>
+  <text x="640" y="440" class="text">Soft refs only if needed</text>
+  <text x="640" y="462" class="text">Outputs ContextSnapshot</text>
+
+  <!-- Driver -->
+  <rect x="890" y="110" width="470" height="130" class="box"/>
+  <text x="910" y="145" class="label">Agent Driver</text>
+  <text x="910" y="170" class="text">Codex CLI / Gemini CLI / your agent</text>
+  <text x="910" y="195" class="text">Consumes ContextSnapshot, acts in workspace</text>
+
+  <!-- Tools chip row -->
+  <rect x="910" y="208" width="110" height="24" class="chip"/>
+  <text x="965" y="225" text-anchor="middle" class="chipText">shell</text>
+  <rect x="1030" y="208" width="120" height="24" class="chip"/>
+  <text x="1090" y="225" text-anchor="middle" class="chipText">file ops</text>
+  <rect x="1160" y="208" width="110" height="24" class="chip"/>
+  <text x="1215" y="225" text-anchor="middle" class="chipText">search</text>
+  <rect x="1280" y="208" width="70" height="24" class="chip"/>
+  <text x="1315" y="225" text-anchor="middle" class="chipText">etc</text>
+
+  <!-- Workspace / sandbox -->
+  <rect x="890" y="270" width="470" height="240" class="box"/>
+  <text x="910" y="305" class="label">Workspace / Sandbox</text>
+  <text x="910" y="330" class="text">Repo + data + environment</text>
+  <text x="910" y="352" class="text">All edits + commands happen here</text>
+  <text x="910" y="374" class="text muted">Optional: docker isolation / network rules</text>
+
+  <!-- Validator -->
+  <rect x="890" y="540" width="470" height="120" class="subbox"/>
+  <text x="910" y="572" class="label">Validator</text>
+  <text x="910" y="597" class="text">Lazy: run existing tests / parse / lint</text>
+  <text x="910" y="619" class="text">Strict: custom eval_cmd / score.py</text>
+
+  <!-- Observer -->
+  <rect x="330" y="520" width="510" height="140" class="box"/>
+  <text x="350" y="552" class="label">Observer + Metrics</text>
+  <text x="350" y="577" class="text">Captures diff, stdout/stderr, timings, churn</text>
+  <text x="350" y="599" class="text">Computes collapse signals (SCR optional)</text>
+  <text x="350" y="621" class="text">Feeds evidence back to Orchestrator</text>
+
+  <!-- Arrows -->
+  <!-- User -> Orchestrator -->
+  <path d="M 300 155 L 330 155" class="arrow"/>
+  <text x="312" y="142" class="text muted">task</text>
+
+  <!-- Orchestrator -> Driver -->
+  <path d="M 840 175 L 890 175" class="arrow"/>
+  <text x="845" y="160" class="text muted">ContextSnapshot</text>
+
+  <!-- Driver -> Workspace -->
+  <path d="M 1125 240 L 1125 270" class="arrow"/>
+  <text x="1140" y="262" class="text muted">tool calls / edits</text>
+
+  <!-- Workspace -> Validator -->
+  <path d="M 1125 510 L 1125 540" class="arrow"/>
+  <text x="1140" y="532" class="text muted">run checks</text>
+
+  <!-- Validator -> Observer -->
+  <path d="M 890 590 L 840 590" class="arrow"/>
+  <text x="845" y="575" class="text muted">results</text>
+
+  <!-- Workspace -> Observer -->
+  <path d="M 890 500 L 585 520" class="arrow"/>
+  <text x="715" y="500" class="text muted">diff + outputs</text>
+
+  <!-- Observer -> Orchestrator -->
+  <path d="M 585 520 L 585 330" class="arrow"/>
+  <text x="600" y="418" class="text muted">evidence</text>
+
+  <!-- Orchestrator -> Memory -->
+  <path d="M 330 292 L 300 292" class="arrow"/>
+  <!-- Memory -> Orchestrator -->
+  <path d="M 300 318 L 330 318" class="arrow"/>
+  <text x="220" y="308" class="text muted">state / logs</text>
+
+  <!-- Hard refs -> Ranker -->
+  <path d="M 300 500 L 610 500 L 610 425 L 620 425" class="arrow"/>
+  <text x="420" y="488" class="text muted">candidates</text>
+
+  <!-- Optional semantic tools -> Ranker -->
+  <path d="M 590 425 L 620 425" class="arrow-muted"/>
+
+  <!-- Ranker -> Context Pack -->
+  <path d="M 730 360 L 730 345 L 570 345 L 570 278" class="arrow"/>
+  <text x="742" y="338" class="text muted">ranked context</text>
+</svg>

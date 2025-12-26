@@ -12,23 +12,45 @@ class EmbeddingMetricService:
     """
     Implementation of MetricServiceProtocol.
     Decouples the Embedding Model and Math from the Orchestrator.
+    
+    Implements a Singleton pattern for the heavy embedding model to avoid 
+    reloading it during repeated instantiations (e.g. in parameter sweeps).
     """
     
-    def __init__(self, model_name: str = 'all-MiniLM-L6-v2', device: str = 'cpu'):
-        print(f"MetricService: Loading embedding model {model_name}...")
-        try:
-            self.embedding_model = SentenceTransformer(model_name, device=device)
-            print("MetricService: Embedding model loaded.")
-        except Exception as e:
-            print(f"MetricService: Failed to load model: {e}")
-            self.embedding_model = None
+    _shared_model = None
+    _model_cache_key = None
 
-    def calculate_scr(self, branches: List[str]) -> float:
+    def __init__(self, model_name: str = 'all-MiniLM-L6-v2', device: str = 'cpu'):
+        # Singleton Logic: Only load if not already loaded or if config (name/device) changes
+        current_key = (model_name, device)
+        if EmbeddingMetricService._shared_model is None or EmbeddingMetricService._model_cache_key != current_key:
+            print(f"MetricService: Loading embedding model {model_name} on {device} (Singleton)...")
+            try:
+                EmbeddingMetricService._shared_model = SentenceTransformer(model_name, device=device)
+                EmbeddingMetricService._model_cache_key = current_key
+                print("MetricService: Embedding model loaded.")
+            except Exception as e:
+                print(f"MetricService: Failed to load model: {e}")
+                EmbeddingMetricService._shared_model = None
+        
+        self.embedding_model = EmbeddingMetricService._shared_model
+
+    def calculate_scr(self, branches: List[str]) -> Optional[float]:
         """
         Calculates Semantic Collapse Ratio (SCR) using embeddings.
+        
+        NOTE: Scientifically, this measures 'Semantic Divergence' or 'Instability'.
+        - Higher Value: High Divergence (Agent is hallucinating/creative).
+        - Zero Value: Total Collapse (Agent is looping/repeating exact text).
+        - None: Metric unavailable (Model not loaded).
+        
+        Math: Mean Pairwise Cosine Distance (Range: [0, 2]).
         """
-        if not self.embedding_model or not branches:
-            return 0.0
+        if not self.embedding_model:
+            return None
+            
+        if not branches:
+            return None
         
         # Encode branches
         try:
@@ -38,11 +60,15 @@ class EmbeddingMetricService:
             return self._calculate_pairwise_distance(embeddings_list)
         except Exception as e:
             print(f"MetricService Error (SCR): {e}")
-            return 0.0
+            return None
 
     def calculate_rdi(self, current_content: str, ground_truth_text: str) -> Optional[float]:
         """
         Calculates Regressive Debt Index (RDI) by comparing embeddings.
+        
+        NOTE: This measures 'Semantic Drift' from the ground truth.
+        - It uses Cosine Distance (0 to 1).
+        - It does NOT measure completeness (length/coverage), only angular alignment.
         """
         if not self.embedding_model:
             return None
@@ -59,27 +85,40 @@ class EmbeddingMetricService:
             print(f"MetricService Error (RDI): {e}")
             return None
 
-    def calculate_entropy(self, logprobs: List[Any]) -> float:
+    def calculate_entropy(self, logprobs: List[Any]) -> Optional[float]:
         """
         Calculates a proxy for Entropy (Surprisal).
         H ~ - (1/N) * Sum(log(p_chosen))
+        
+        NOTE: Units are 'Nats' (Natural Logarithm) if using standard OpenAI logprobs (ln).
+        To convert to Bits: Multiply by 1.44 (1 / ln(2)).
         """
         if not logprobs:
-            return 0.0
-        
-        clean_logprobs = []
+            return None
+
+        clean_logprobs: List[float] = []
         for lp in logprobs:
             if isinstance(lp, list):
-                if lp: clean_logprobs.append(lp[0])
-                else: clean_logprobs.append(0.0)
-            elif isinstance(lp, (int, float)):
-                clean_logprobs.append(lp)
-            else:
-                clean_logprobs.append(0.0)
-                
+                if not lp:
+                    continue
+                candidate = lp[0]
+                if isinstance(candidate, (int, float)) and math.isfinite(candidate):
+                    clean_logprobs.append(float(candidate))
+                continue
+
+            if isinstance(lp, (int, float)) and math.isfinite(lp):
+                clean_logprobs.append(float(lp))
+
         if not clean_logprobs:
-            return 0.0
-            
+            return None
+
+        # Sanity checks: log(p) should be <= 0 and typically < 0.
+        # Some providers return placeholder zeros when logprobs are unsupported; treat as missing.
+        if any(lp > 0.0 for lp in clean_logprobs):
+            return None
+        if min(clean_logprobs) > -1e-3:
+            return None
+
         total_surprisal = sum(-lp for lp in clean_logprobs)
         return total_surprisal / len(clean_logprobs)
 

@@ -26,32 +26,43 @@ def plot_swe_agent_metrics(df, output_path="data/results/mini_swe_agent_metrics.
     if df is None or df.empty:
         print("No data to plot for mini-swe-agent.")
         return
+    
+    df = df.copy()
+    if 'step_index' not in df.columns:
+        df['step_index'] = range(1, len(df) + 1)
+    if 'current_entropy' not in df.columns:
+        df['current_entropy'] = pd.NA
+    if 'scr' not in df.columns:
+        df['scr'] = pd.NA
+    if 'event_type' not in df.columns:
+        df['event_type'] = 'llm_call'
 
-    # Ensure all relevant columns exist, fill missing with NaN for plotting clarity
-    df['entropy'] = df['entropy'].fillna(method='ffill').fillna(method='bfill')
-    df['scr'] = df['scr'].fillna(0) # SCR only exists at perturbation, fill others with 0
+    df['step_index'] = pd.to_numeric(df['step_index'], errors='coerce')
+    df['current_entropy'] = pd.to_numeric(df['current_entropy'], errors='coerce')
+    df['scr'] = pd.to_numeric(df['scr'], errors='coerce')
+    df = df.sort_values('step_index')
 
-    steps = range(1, len(df) + 1) # Use sequential steps since original step_index might not be continuous
+    steps = df['step_index']
     
     fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
     
     # Plot 1: Entropy
-    axes[0].plot(steps, df['entropy'], marker='o', linestyle='-', color='blue', label='Agent Entropy (per LLM Call)')
+    entropy_data = df[df['current_entropy'].notna()]
+    axes[0].plot(entropy_data['step_index'], entropy_data['current_entropy'], marker='o', linestyle='-', color='blue', label='Agent Entropy (per LLM Call)')
     axes[0].set_ylabel('Entropy')
     axes[0].set_title('Mini-SWE-Agent: Entropy and SCR per LLM Call')
     axes[0].grid(True, alpha=0.3)
     axes[0].legend()
 
     # Plot 2: Semantic Collapse Ratio (SCR)
-    # SCR is only calculated when branching probe is triggered (i.e., when scr is not 0)
-    scr_data = df[df['scr'] > 0]
+    scr_data = df[df['scr'].notna() & df['event_type'].isin(['periodic_probe', 'perturbation_triggered', 'proxy_probe', 'proxy_shock_injected'])]
     if not scr_data.empty:
-        axes[1].bar(scr_data.index + 1, scr_data['scr'], color='red', width=0.5, label='SCR (when triggered)')
+        axes[1].bar(scr_data['step_index'], scr_data['scr'], color='red', width=0.5, label='SCR (probe)')
         for i, row in scr_data.iterrows():
-            axes[1].text(i + 1, row['scr'] + 0.01, f"{row['scr']:.2f}", ha='center', color='red')
+            axes[1].text(row['step_index'], row['scr'] + 0.01, f"{row['scr']:.2f}", ha='center', color='red')
     
     axes[1].set_ylabel('SCR Score')
-    axes[1].set_xlabel('LLM Call Index')
+    axes[1].set_xlabel('Step Index')
     axes[1].set_ylim(0, df['scr'].max() * 1.2 if not df['scr'].empty else 1.0) # Adjust ylim for clarity
     axes[1].grid(True, alpha=0.3)
     axes[1].legend()
