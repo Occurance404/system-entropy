@@ -7,6 +7,15 @@ __pycache__
 .gemini
 nohup.out
 
+# Paper / thesis artifacts (keep repo lightweight)
+*.pptx
+*.docx
+*.xlsx
+*.pdf
+
+# Local-only model lists
+benchmarks/models.ollama.json
+
 # OS / editor / office temp files
 .DS_Store
 .tmp*/

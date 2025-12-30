@@ -1,0 +1,9 @@
+[
+  {
+    "name": "ollama_deepseek_r1_14b",
+    "model": "deepseek-r1:14b",
+    "base_url": "http://127.0.0.1:11434/v1",
+    "api_key_env": "VLLM_API_KEY",
+    "temperature": 0.2
+  }
+]

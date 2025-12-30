@@ -2,7 +2,7 @@ import math
 import ast
 import numpy as np
 import zlib
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from scipy.spatial.distance import cosine
 
 class StateMonitor:
@@ -79,7 +79,7 @@ class StateMonitor:
             
         return float(np.mean(distances))
 
-    def calculate_entropy_from_logprobs(self, logprobs: List[Any]) -> float:
+    def calculate_entropy_from_logprobs(self, logprobs: List[Any]) -> Optional[float]:
         """
         Calculates a proxy for Entropy (Surprisal) from a sequence of token log probabilities.
         Since we only have the logprob of the *chosen* token, we calculate the Average Negative Log Probability.
@@ -87,25 +87,28 @@ class StateMonitor:
         H ~ - (1/N) * Sum(log(p_chosen))
         """
         if not logprobs:
-            return 0.0
+            return None
         
         # Flatten/Extract chosen logprobs if nested lists (mock data often does this)
-        clean_logprobs = []
+        clean_logprobs: List[float] = []
         for lp in logprobs:
             if isinstance(lp, list):
                 # Assuming the first one is the chosen one or best candidate
-                if lp:
-                    clean_logprobs.append(lp[0])
-                else:
-                    clean_logprobs.append(0.0)
-            elif isinstance(lp, (int, float)):
-                clean_logprobs.append(lp)
-            else:
-                # Unknown type, skip or default
-                clean_logprobs.append(0.0)
+                if lp and isinstance(lp[0], (int, float)) and math.isfinite(lp[0]):
+                    clean_logprobs.append(float(lp[0]))
+                continue
+
+            if isinstance(lp, (int, float)) and math.isfinite(lp):
+                clean_logprobs.append(float(lp))
                 
         if not clean_logprobs:
-            return 0.0
+            return None
+
+        # log(p) must be <= 0. Some providers return 0 placeholders when unsupported.
+        if any(lp > 0.0 for lp in clean_logprobs):
+            return None
+        if min(clean_logprobs) > -1e-3:
+            return None
             
         # Sum of negative log probabilities
         total_surprisal = sum(-lp for lp in clean_logprobs)

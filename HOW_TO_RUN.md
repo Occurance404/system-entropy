@@ -7,8 +7,14 @@ This guide explains how to run the "Cognitive Collapse" experiments, including t
 Ensure you have the virtual environment set up and dependencies installed:
 
 ```bash
+# Create a venv if you don't have one yet
+python3 -m venv .venv
+
 # Activate the virtual environment (if not already active)
 source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 ## 2. Configuration
@@ -39,8 +45,26 @@ export SANDBOX_BACKEND=local   # or "auto" (default) to fall back automatically
 # Avoid logprob bottlenecks (entropy becomes optional).
 export REQUEST_LOGPROBS=auto   # auto|off|on
 
+# Avoid tool-calling bottlenecks (falls back to text-based JSON tool calls).
+export REQUEST_TOOLS=auto      # auto|off|on
+
 # Optional: do not block writes that look like secrets (be careful).
 export SECRETS_POLICY=warn     # block|warn|off
+```
+
+### Local Ollama (Zero Credits)
+
+If you’re running a local model via Ollama (port `11434`), set:
+
+```bash
+export VLLM_BASE_URL=http://127.0.0.1:11434/v1
+export VLLM_API_KEY=ollama
+export VLLM_MODEL_NAME=deepseek-r1:14b
+
+# Recommended for Ollama models that reject native `tools`:
+export REQUEST_TOOLS=off
+export REQUEST_LOGPROBS=off
+export SANDBOX_BACKEND=local
 ```
 
 ## 3. Running Experiments
@@ -109,7 +133,8 @@ For multi-model sweeps with deterministic validators, use `run_benchmark.py` + `
 
 2) (Optional) Probe provider capabilities (logprobs + tools):
 ```bash
-python check_model_capabilities.py --models benchmarks/models.paper.template.json
+python3 check_model_capabilities.py --models benchmarks/models.paper.template.json
+python3 check_model_capabilities.py --models benchmarks/models.ollama.example.json
 ```
 
 3) Run a small sweep (cheap-ish defaults):

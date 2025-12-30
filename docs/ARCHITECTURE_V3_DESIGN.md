@@ -9,11 +9,12 @@
 This document describes a **V3 target architecture**. The current repository implements a **V2 baseline** stress-test harness (orchestrator + sandbox + metrics + scenario validators), plus a few reliability features to avoid blocked runs.
 
 **Already implemented (V2 + no-block additions):**
-- Orchestrator loop + scenario execution: `src/orchestrator/engine.py`
+- Orchestrator loop + scenario execution: `src/orchestrator/engine.py` (implementation: `src/orchestrator/core/orchestrator.py`)
 - Sandbox backend selection (Docker → local fallback): `SANDBOX_BACKEND=auto|docker|local` (`src/orchestrator/engine.py`, `src/connectors/local_connect.py`)
 - Scenario setup/reset guardrails: `RESET_SANDBOX=1|0` (`src/scenarios/setup_ops.py`)
 - Metrics + logging (SCR/CR/entropy proxy with logprobs sanity): `src/services/metrics.py`
 - Logprobs request fallback (don’t fail runs if unsupported): `REQUEST_LOGPROBS=auto|off|on` and `PROXY_REQUEST_LOGPROBS=auto|off|on` (`src/agent/real_agent.py`, `src/llm_proxy.py`)
+- Tools request fallback (don’t fail runs if unsupported): `REQUEST_TOOLS=auto|off|on` (native tools when available; otherwise text-based JSON tool calls) (`src/agent/real_agent.py`)
 - Optional cost reduction for branching probes: `CHEAP_MODE=1` or `PROXY_SCR_MODE=off` (`src/llm_proxy.py`)
 - Secrets policy (block/warn/off): `SECRETS_POLICY=block|warn|off` (`src/security/secrets.py`)
 
@@ -137,6 +138,40 @@ This document describes a **V3 target architecture**. The current repository imp
 - Off-by-one: `range(n)` → `range(n-1)`
 
 **Method:** Pattern match on diff hunks. Optional: LLM sanity check for ambiguous cases.
+
+---
+
+## 7. Critical Enhancements (V3+)
+
+**Identified Gaps to reach "Ultimate Agent" status:**
+
+### A. Persistent Semantic Memory (Cross-Session)
+**Problem:** Agent solves a complex dependency issue in Run A, but forgets it in Run B.
+**Solution:**
+- **Vector Archive:** Store `(error_signature, reasoning, solution_diff)` tuples in a local vector store (e.g., Chroma/Qdrant or JSONL).
+- **Retrieval:** Context Builder queries this archive for similar past failures before prompting the agent.
+
+### B. Human-in-the-Loop "Emergency Brake"
+**Problem:** Autonomous loops can spiral (e.g., deleting wrong files). "Confidence" metrics might miss subtle destruction.
+**Solution:**
+- **Interrupt State:** If `Action Classifier` flags `SUSPICIOUS` (high deletion count, sensitive file mod) or `CONFUSED` (high SCR), **PAUSE**.
+- **UX:** Await user `y/n` confirmation before proceeding or escalating.
+
+### C. Dynamic Tool Synthesis
+**Problem:** Agent repeats verbose shell commands for standard tasks.
+**Solution:**
+- **Tool Creator:** Allow agent to write scripts to `.gemini/tools/` and dynamically register them as new function calls in the current session.
+
+### D. Economic Circuit Breakers
+**Problem:** `Graduated Recovery` could loop indefinitely with expensive models (GPT-4), burning budget.
+**Solution:**
+- **Cost Guard:** Hard limits on `Total Spend ($)` and `Step Count`.
+- **Policy:** If Level 4 (Rescue) fails 2x, terminate execution.
+
+### E. Environment "Doctor"
+**Problem:** If `pip` or `npm` is broken, the agent fails every step.
+**Solution:**
+- **Pre-flight Diagnostics:** Dedicated pass to verify toolchain health before entering the main loop. Auto-fix environment issues first.
 
 ---
 

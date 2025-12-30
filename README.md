@@ -6,7 +6,7 @@ A research framework to study how LLM-based agents behave under non-stationary t
 - Requirements: Python 3.11+, `virtualenv`; Docker needed for TerminalBench sandbox runs.
 - Install:
   ```bash
-  python -m venv .venv && source .venv/bin/activate
+  python3 -m venv .venv && source .venv/bin/activate
   pip install -r requirements.txt
   ```
 - Configure `.env` (example):
@@ -52,7 +52,7 @@ Logs land under `data/logs_rescue/`, `data/logs_hard_mode/`, or `data/logs_termi
 Per-run manifests and summaries land under `data/run_artifacts/<run_id>/`.
 
 ## Core Concepts
-- **Orchestrator** (`src/orchestrator/engine.py`): injects perturbations, runs branching probes, tracks panic counters, and can switch to a rescue agent.
+- **Orchestrator** (`src/orchestrator/engine.py`, implementation in `src/orchestrator/core/orchestrator.py`): injects perturbations, runs branching probes, tracks panic counters, and can switch to a rescue agent.
 - **Agents**: `OpenAICompatibleAgent` (tool-calling, async probes) and `ScriptedAgent` (mock). Tools: read/write file, run shell, execute Python, stub web search.
 - **Metrics** (`src/services/metrics.py`):
   - Entropy (chosen-token surprisal), IGE `(H_pre - H_post)/token_cost` around tool calls.
@@ -87,6 +87,20 @@ python smoke_test.py
 - For production-style runs, set `PROXY_AUTH_TOKEN` and start `src/llm_proxy.py` before agents.
 - If Docker is unavailable, set `SANDBOX_BACKEND=local` (or leave `auto` to fall back) to run sandboxes directly on your machine.
 - If a provider rejects `logprobs`, set `REQUEST_LOGPROBS=off` (default `auto` disables logprobs after the first rejection).
+- If a provider rejects OpenAI tool calling (`tools` / `tool_choice`), set `REQUEST_TOOLS=off` to use text-based JSON tool calls (default `auto` falls back after the first rejection).
+
+### Local Ollama (Zero Credits)
+
+Ollama exposes an OpenAI-compatible endpoint on `http://127.0.0.1:11434/v1`:
+
+```bash
+export VLLM_BASE_URL=http://127.0.0.1:11434/v1
+export VLLM_API_KEY=ollama
+export VLLM_MODEL_NAME=deepseek-r1:14b
+export REQUEST_TOOLS=off
+export REQUEST_LOGPROBS=off
+export SANDBOX_BACKEND=local
+```
 
 ## Safety Guards (V1)
 - Tool outputs are truncated + redacted before being appended to the agent history (prevents context flooding and accidental secret exposure).

@@ -57,8 +57,7 @@ def run_telephone_game(model_name: str, api_key: str, base_url: str, hops: int =
             logprobs = response.get("logprobs", [])
             
             # Metrics
-            entropy = monitor.calculate_entropy_from_logprobs(logprobs)
-            avg_entropy = entropy / len(logprobs) if logprobs else 0.0
+            avg_entropy = monitor.calculate_entropy_from_logprobs(logprobs)
             
             # Semantic Drift (Distance from Ground Truth)
             drift_from_truth = calculate_cosine_distance(embedding_model, ground_truth, generated_text)
@@ -71,7 +70,7 @@ def run_telephone_game(model_name: str, api_key: str, base_url: str, hops: int =
                 "hop": hop,
                 "input_message": current_message,
                 "output_message": generated_text,
-                "avg_token_entropy": float(avg_entropy),
+                "avg_token_entropy": (float(avg_entropy) if avg_entropy is not None else None),
                 "semantic_drift_from_truth": float(drift_from_truth),
                 "step_mutation_score": float(shift_from_prev),
                 "timestamp": datetime.now().isoformat()
@@ -79,7 +78,10 @@ def run_telephone_game(model_name: str, api_key: str, base_url: str, hops: int =
             f.write(json.dumps(entry) + "\n")
             f.flush()
             
-            print(f"  > Entropy: {avg_entropy:.4f}")
+            if avg_entropy is None:
+                print("  > Entropy: N/A (no logprobs)")
+            else:
+                print(f"  > Entropy: {avg_entropy:.4f}")
             print(f"  > Drift from Truth: {drift_from_truth:.4f}")
             print(f"  > Output Start: {generated_text[:50]}...")
             
