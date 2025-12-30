@@ -64,7 +64,7 @@ This writes `data/results/benchmark_<...>_summary.csv` with:
 If you have a representative run log (`.jsonl`), generate the multi-panel “experiment summary” plot:
 
 ```bash
-.venv/bin/python visualize_results.py --log data/logs_terminal_bench/<run>.jsonl
+.venv/bin/python visualize_results.py --log_file data/logs_terminal_bench/<run>.jsonl
 ```
 
 By default figures land under `data/results/`.
@@ -73,4 +73,3 @@ By default figures land under `data/results/`.
 
 - Table: `data/results/benchmark_<...>_summary.csv`
 - Figure: `data/results/experiment_summary.png` (from a representative run)
-
