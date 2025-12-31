@@ -22,6 +22,7 @@ export VLLM_API_KEY=ollama
 export REQUEST_TOOLS=off
 export REQUEST_LOGPROBS=off
 export SANDBOX_BACKEND=local
+export VALIDATION_FEEDBACK=on
 ```
 
 Use the provided example model list:

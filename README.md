@@ -88,6 +88,7 @@ python smoke_test.py
 - If Docker is unavailable, set `SANDBOX_BACKEND=local` (or leave `auto` to fall back) to run sandboxes directly on your machine.
 - If a provider rejects `logprobs`, set `REQUEST_LOGPROBS=off` (default `auto` disables logprobs after the first rejection).
 - If a provider rejects OpenAI tool calling (`tools` / `tool_choice`), set `REQUEST_TOOLS=off` to use text-based JSON tool calls (default `auto` falls back after the first rejection).
+- Optional: expose validator failures back to the agent with `VALIDATION_FEEDBACK=on` (default `off`).
 
 ### Local Ollama (Zero Credits)
 

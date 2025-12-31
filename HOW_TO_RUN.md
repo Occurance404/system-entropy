@@ -48,6 +48,9 @@ export REQUEST_LOGPROBS=auto   # auto|off|on
 # Avoid tool-calling bottlenecks (falls back to text-based JSON tool calls).
 export REQUEST_TOOLS=auto      # auto|off|on
 
+# Optional: feed validator failures back into the agent context (can improve completion rates).
+export VALIDATION_FEEDBACK=off # off|on
+
 # Optional: do not block writes that look like secrets (be careful).
 export SECRETS_POLICY=warn     # block|warn|off
 ```

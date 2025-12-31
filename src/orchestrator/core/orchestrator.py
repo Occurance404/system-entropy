@@ -70,6 +70,12 @@ class Orchestrator:
         self.enable_validation = enable_validation
         self.validation_interval = max(1, int(validation_interval))
         self.stop_on_success = stop_on_success
+        self.validation_feedback = (os.getenv("VALIDATION_FEEDBACK") or "off").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
         self.enable_branching_probes = enable_branching_probes
         self.probe_branch_count = max(2, int(probe_branch_count))
 
@@ -424,7 +430,8 @@ class Orchestrator:
             step_metrics["cbf"] = cbf_value
 
             safe_args = format_tool_args_for_history(tool_name, tool_args)
-            self.history.append({"role": "user", "content": f"Used tool: {tool_name} with args: {safe_args}"})
+            # Record the tool call as an assistant action to keep dialogue roles coherent.
+            self.history.append({"role": "assistant", "content": f"Used tool: {tool_name} with args: {safe_args}"})
             self.history.append({"role": "tool_output", "content": SecretScanner.redact(str(tool_result))})
 
         elif agent_action_intent["type"] == "llm_reply":
@@ -441,6 +448,11 @@ class Orchestrator:
                 step_metrics["validation_passed"] = bool(validation.passed)
                 step_metrics["validation_score"] = validation.score
                 step_metrics["validation_details"] = validation.details
+                if self.validation_feedback and not validation.passed:
+                    details = validation.details or "Validation failed."
+                    if len(details) > 800:
+                        details = details[:800] + "... <truncated>"
+                    self.history.append({"role": "user", "content": f"VALIDATION FAILED: {details}"})
                 if validation.passed and self.stop_on_success:
                     step_metrics["task_complete"] = True
                     self.task_complete = True
@@ -493,4 +505,3 @@ class Orchestrator:
                 "content": "Intervention: You seem stuck. Please reassess your goal and try a different approach.",
             }
         )
-
