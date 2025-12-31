@@ -68,6 +68,17 @@ class OpenAICompatibleAgent(AgentWrapper):
         # try sending tools/tool_choice, and if the provider rejects them, fall back to text-based tool calls.
         self.tools_mode = (os.getenv("REQUEST_TOOLS") or "auto").strip().lower()
         self._tools_supported: Optional[bool] = None
+
+        # Token caps are important for local/open models that otherwise emit very long outputs.
+        # Defaults are conservative for agentic code-writing; override per-run via env vars.
+        try:
+            self.max_completion_tokens = max(1, int(os.getenv("MAX_COMPLETION_TOKENS") or "1024"))
+        except Exception:
+            self.max_completion_tokens = 1024
+        try:
+            self.probe_max_tokens = max(1, int(os.getenv("PROBE_MAX_TOKENS") or "192"))
+        except Exception:
+            self.probe_max_tokens = 192
         
         # Define a clear system message to orient the agent as a task executor
         self.system_message = {
@@ -317,6 +328,7 @@ class OpenAICompatibleAgent(AgentWrapper):
                 "model": self.model_name,
                 "messages": messages,
                 "temperature": self.temperature,
+                "max_tokens": self.max_completion_tokens,
             }
 
             def apply_optional_params() -> None:
@@ -525,6 +537,7 @@ class OpenAICompatibleAgent(AgentWrapper):
                 "messages": messages,
                 "temperature": 0.9,  # High temp for divergence
                 "n": 1,
+                "max_tokens": self.probe_max_tokens,
             }
             if request_logprobs:
                 kwargs["logprobs"] = True

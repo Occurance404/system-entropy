@@ -51,6 +51,10 @@ export REQUEST_TOOLS=auto      # auto|off|on
 # Optional: feed validator failures back into the agent context (can improve completion rates).
 export VALIDATION_FEEDBACK=off # off|on
 
+# Token caps (recommended for local/open models to avoid huge generations)
+export MAX_COMPLETION_TOKENS=1024
+export PROBE_MAX_TOKENS=192
+
 # Optional: do not block writes that look like secrets (be careful).
 export SECRETS_POLICY=warn     # block|warn|off
 ```

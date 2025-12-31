@@ -23,6 +23,10 @@ export REQUEST_TOOLS=off
 export REQUEST_LOGPROBS=off
 export SANDBOX_BACKEND=local
 export VALIDATION_FEEDBACK=on
+
+# Keep generations bounded (DeepSeek-R1 can otherwise be very verbose).
+export MAX_COMPLETION_TOKENS=1024
+export PROBE_MAX_TOKENS=192
 ```
 
 Use the provided example model list:
