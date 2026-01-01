@@ -42,6 +42,10 @@ If you want the framework to “just run” across providers with different feat
 # Avoid Docker bottlenecks (runs sandboxes on your machine).
 export SANDBOX_BACKEND=local   # or "auto" (default) to fall back automatically
 
+# Optional: python interpreter used by the `execute_python` tool.
+# Local sandbox defaults to repo `.venv` when available; override here if needed.
+export SANDBOX_PYTHON=python3
+
 # Avoid logprob bottlenecks (entropy becomes optional).
 export REQUEST_LOGPROBS=auto   # auto|off|on
 

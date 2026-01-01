@@ -2,6 +2,7 @@ import ast
 import difflib
 import os
 import re
+import shlex
 from typing import Dict, Any, List, Tuple, Optional
 from src.tools.base import ToolProtocol
 from src.interfaces import SandboxConnectorProtocol
@@ -181,6 +182,11 @@ class WriteFileTool(ToolProtocol):
     def execute(self, args: Dict[str, Any], connector: SandboxConnectorProtocol) -> Tuple[str, Optional[int]]:
         path = args.get('path', '')
         content = args.get('content', '')
+        if isinstance(content, str):
+            # Some models emit JSON with double-escaped newlines (e.g. "\\n") which would
+            # otherwise be written literally and produce invalid code/files.
+            if "\\n" in content and "\n" not in content and content.count("\\n") >= 2:
+                content = content.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r")
 
         policy = SecretScanner.policy()
         if policy != "off":
@@ -233,7 +239,22 @@ class ExecutePythonTool(ToolProtocol):
     
     def execute(self, args: Dict[str, Any], connector: SandboxConnectorProtocol) -> Tuple[str, Optional[int]]:
         script_path = args.get('script_path', '')
-        exit_code, output = connector.execute_command(f"python3 {script_path}")
+        python_bin = os.getenv("SANDBOX_PYTHON")
+        if not python_bin:
+            # Local backend: prefer repo venv for consistent dependencies (e.g., pandas).
+            try:
+                from src.connectors.local_connect import LocalSandboxConnector
+
+                if isinstance(connector, LocalSandboxConnector):
+                    candidate = os.path.join(os.getcwd(), ".venv", "bin", "python")
+                    if os.path.exists(candidate):
+                        python_bin = candidate
+            except Exception:
+                python_bin = None
+
+        python_bin = python_bin or "python3"
+
+        exit_code, output = connector.execute_command(f"{shlex.quote(python_bin)} {shlex.quote(script_path)}")
         output = SecretScanner.redact(output)
         output = self._truncate_output(output)
         return f"Exit Code: {exit_code}\nOutput:\n{output}", None

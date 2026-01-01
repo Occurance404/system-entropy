@@ -23,6 +23,7 @@ export REQUEST_TOOLS=off
 export REQUEST_LOGPROBS=off
 export SANDBOX_BACKEND=local
 export VALIDATION_FEEDBACK=on
+export SANDBOX_PYTHON="$(pwd)/.venv/bin/python"
 
 # Keep generations bounded (DeepSeek-R1 can otherwise be very verbose).
 export MAX_COMPLETION_TOKENS=1024
