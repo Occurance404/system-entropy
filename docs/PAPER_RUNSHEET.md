@@ -52,6 +52,17 @@ Recommended (paper-style): shock-only probes, small branch count.
 
 Output lands in `data/results/benchmark_<suite>_<timestamp>.csv`.
 
+To quickly debug one task end-to-end:
+
+```bash
+.venv/bin/python run_benchmark.py \
+  --models benchmarks/models.ollama.example.json \
+  --suite benchmarks/suite_v1.json \
+  --only-scenarios drug_filter_baseline \
+  --repeats 1 \
+  --probe-mode off
+```
+
 ## 3) Aggregate into paper tables (summary CSV)
 
 ```bash

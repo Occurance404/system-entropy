@@ -160,6 +160,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run a reproducible benchmark sweep across models and scenarios.")
     parser.add_argument("--models", default="benchmarks/models.example.json", help="Path to models JSON file.")
     parser.add_argument("--suite", default="benchmarks/suite_v1.json", help="Path to suite JSON file.")
+    parser.add_argument(
+        "--only-scenarios",
+        default=None,
+        help="Comma-separated scenario IDs to run (default: run all scenarios in the suite).",
+    )
     parser.add_argument("--repeats", type=int, default=3, help="Runs per (model, scenario).")
     parser.add_argument("--probe-mode", choices=["off", "shock", "periodic"], default="shock")
     parser.add_argument("--probe-interval", type=int, default=5, help="Used when --probe-mode=periodic.")
@@ -178,6 +183,12 @@ def main() -> None:
     scenarios = suite.get("scenarios") or []
     if not scenarios:
         raise SystemExit(f"Suite has no scenarios: {args.suite}")
+
+    if args.only_scenarios:
+        requested = {s.strip() for s in str(args.only_scenarios).split(",") if s.strip()}
+        scenarios = [s for s in scenarios if str(s.get("scenario_id")) in requested]
+        if not scenarios:
+            raise SystemExit(f"No scenarios matched --only-scenarios={args.only_scenarios}")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = args.out or os.path.join(RESULTS_DIR, f"benchmark_{suite.get('suite_id', 'suite')}_{ts}.csv")
