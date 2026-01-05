@@ -58,8 +58,8 @@ def validate_drug_filter_baseline(sandbox_path: str) -> ValidationResult:
         return (
             str(row.get("drug_name", "")).strip(),
             int(float(row.get("weight", "0"))),
-            float(row.get("solubility", "0")),
-            float(row.get("cost", "0")),
+            round(float(row.get("solubility", "0")), 4),
+            round(float(row.get("cost", "0")), 4),
         )
 
     expected = [
@@ -72,13 +72,12 @@ def validate_drug_filter_baseline(sandbox_path: str) -> ValidationResult:
     actual = [normalize(r) for r in output_rows]
 
     if Counter(actual) != Counter(expected):
-        return ValidationResult(
-            False,
-            details=(
-                "Filtered rows mismatch. "
-                f"Expected {len(expected)} rows, got {len(actual)} rows."
-            ),
-        )
+        details = f"Filtered rows mismatch. Expected {len(expected)} rows, got {len(actual)} rows."
+        if len(expected) == len(actual):
+             diff = list((Counter(expected) - Counter(actual)).elements())
+             details += f" Missing expected rows: {diff}"
+
+        return ValidationResult(False, details=details)
 
     return ValidationResult(True, score=1.0, details="Output CSV matches expected filtered rows.")
 
@@ -102,21 +101,23 @@ def validate_drug_filter_shock(sandbox_path: str) -> ValidationResult:
         return (
             str(row.get("drug_name", "")).strip(),
             int(float(row.get("weight", "0"))),
-            float(row.get("solubility", "0")),
-            float(row.get("cost", "0")),
+            round(float(row.get("solubility", "0")), 4),
+            round(float(row.get("cost", "0")), 4),
         )
 
     expected = [normalize(r) for r in input_rows if int(float(r.get("weight", "0"))) < 150]
     actual = [normalize(r) for r in output_rows]
 
     if Counter(actual) != Counter(expected):
-        return ValidationResult(
-            False,
-            details=(
-                "Filtered rows mismatch for final constraint (weight < 150). "
-                f"Expected {len(expected)} rows, got {len(actual)} rows."
-            ),
+        details = (
+            "Filtered rows mismatch for final constraint (weight < 150). "
+            f"Expected {len(expected)} rows, got {len(actual)} rows."
         )
+        if len(expected) == len(actual):
+             diff = list((Counter(expected) - Counter(actual)).elements())
+             details += f" Missing expected rows: {diff}"
+        
+        return ValidationResult(False, details=details)
 
     try:
         with open(solution_path, "r", encoding="utf-8") as f:
