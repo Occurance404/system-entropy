@@ -46,6 +46,7 @@ class OpenAICompatibleAgent(AgentWrapper):
         
         base_url = base_url or os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
         api_key = api_key or os.getenv("VLLM_API_KEY", "EMPTY")
+        self.base_url = base_url
         
         # Sync client for standard steps (to keep Orchestrator simple)
         self.client = OpenAI(
@@ -480,7 +481,7 @@ class OpenAICompatibleAgent(AgentWrapper):
             # This is the "Sync-Async Bridge" problem.
             # Solution: Use a separate thread to run the async loop if the main thread is blocked?
             # Or simpler: Just run it. 
-            # If we are here, likely the user is running `python simulate.py` which is sync.
+            # If we are here, likely the user is running `python experiments/simulate.py` which is sync.
             # So `asyncio.run` implies NO loop.
             # If there IS a loop (e.g. FastAPI), `asyncio.run` fails.
             pass

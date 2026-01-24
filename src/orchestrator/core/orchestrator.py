@@ -52,9 +52,16 @@ class Orchestrator:
         if not self.scenario:
             raise ValueError(f"Scenario with ID '{scenario_id}' not found.")
 
+        self.run_id = run_id or str(uuid.uuid4())
+
         # --- ENVIRONMENT SETUP ---
         project_root = os.path.abspath(os.getcwd())
-        self.sandbox_path = os.path.join(project_root, "data", f"sandbox_{scenario_id}")
+        backend = (os.getenv("SANDBOX_BACKEND") or "auto").strip().lower()
+        sandbox_per_run = (os.getenv("SANDBOX_PER_RUN") or "0").strip().lower() in ("1", "true", "yes", "on")
+        sandbox_dirname = f"sandbox_{scenario_id}"
+        if sandbox_per_run and backend in ("local", "host"):
+            sandbox_dirname = f"sandbox_{scenario_id}_{self.run_id}"
+        self.sandbox_path = os.path.join(project_root, "data", sandbox_dirname)
 
         if scenario_id in SCENARIO_SETUP_MAP:
             print(f"Orchestrator: Running environment setup for {scenario_id}...")
@@ -63,7 +70,6 @@ class Orchestrator:
             os.makedirs(self.sandbox_path, exist_ok=True)
 
         self.agent = agent
-        self.run_id = run_id or str(uuid.uuid4())
         self.metrics_monitor = metrics_monitor
         self.enable_intervention = enable_intervention
         self.probe_interval = probe_interval
@@ -109,7 +115,6 @@ class Orchestrator:
         if connector:
             self.connector = connector
         else:
-            backend = (os.getenv("SANDBOX_BACKEND") or "auto").strip().lower()
             if backend in ("local", "host"):
                 print("Initializing Local Sandbox (no Docker)...")
                 self.connector = LocalSandboxConnector(self.sandbox_path)
@@ -163,6 +168,12 @@ class Orchestrator:
                         "stop_on_success": self.stop_on_success,
                         "enable_branching_probes": self.enable_branching_probes,
                         "probe_branch_count": self.probe_branch_count,
+                        "agent_base_url": getattr(self.agent, "base_url", None),
+                        "metric_embedding_backend": getattr(self.metric_service, "embedding_backend", None),
+                        "metric_embedding_model": getattr(self.metric_service, "model_name", None),
+                        "metric_embedding_device": getattr(self.metric_service, "device", None),
+                        "metric_local_files_only": getattr(self.metric_service, "local_files_only", None),
+                        "metric_hash_dim": getattr(self.metric_service, "hash_dim", None),
                     },
                 ),
             )

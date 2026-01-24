@@ -27,10 +27,17 @@ data/logs_real/
 data/logs_telephone/
 data/logs_terminal_bench/
 
+logs/
+logs/real/
+logs/telephone/
+logs/terminal_bench/
+
 # Experiment outputs (keep repo clean)
 data/logs/
 data/logs_rescue/
 data/logs_hard_mode/
+logs/rescue/
+logs/hard_mode/
 data/run_artifacts/
 data/archive/
 data/sandbox_*/

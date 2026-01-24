@@ -4,12 +4,22 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-def setup_environment(base_path="data/sandbox_task_1"):
+def setup_environment(base_path="data/sandbox_task_1", seed: int | None = None):
     """
     Generates a synthetic defect detection dataset.
     Phase 1: 64x64 Grayscale (Simple)
     Phase 2: 128x128 RGB + Noise (Hard)
     """
+    if seed is None:
+        seed_raw = os.getenv("SCENARIO_SEED")
+        try:
+            seed = int(seed_raw) if seed_raw is not None else 0
+        except Exception:
+            seed = 0
+
+    random.seed(seed)
+    np.random.seed(seed)
+
     os.makedirs(base_path, exist_ok=True)
     print(f"Generating Vision Dataset at {base_path}...")
     

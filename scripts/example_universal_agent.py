@@ -1,6 +1,9 @@
 import os
 import sys
 import openai
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from src.connectors.tb_connect import TerminalBenchConnector
 
 # This is a "Universal Agent" - just a standard Python script.

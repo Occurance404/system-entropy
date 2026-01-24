@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import sys
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -8,6 +9,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 from dotenv import dotenv_values
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from src.agent.real_agent import OpenAICompatibleAgent
 from src.monitor.terminal_bench_monitor import TerminalBenchMonitor
@@ -57,6 +60,7 @@ def _run_one(
     model: ModelSpec,
     scenario_id: str,
     max_steps: int,
+    rep_index: int,
     dotenv: Dict[str, str],
     enable_branching_probes: bool,
     probe_interval: int,
@@ -71,6 +75,11 @@ def _run_one(
     run_id = str(uuid.uuid4())
     metric_service = EmbeddingMetricService()
     metrics_monitor = TerminalBenchMonitor()
+    metric_backend = getattr(metric_service, "embedding_backend", None)
+    metric_model = getattr(metric_service, "model_name", None)
+    metric_device = getattr(metric_service, "device", None)
+    metric_local_files_only = getattr(metric_service, "local_files_only", None)
+    metric_hash_dim = getattr(metric_service, "hash_dim", None)
 
     agent = OpenAICompatibleAgent(
         model_name=model.model,
@@ -139,6 +148,7 @@ def _run_one(
         "model_name": model.name,
         "model": model.model,
         "scenario_id": scenario_id,
+        "rep_index": int(rep_index),
         "max_steps": max_steps,
         "steps_executed": orchestrator.step_count,
         "last_event_type": last_event_type,
@@ -153,6 +163,11 @@ def _run_one(
         "probe_branch_count": probe_branch_count,
         "enable_branching_probes": enable_branching_probes,
         "enable_intervention": enable_intervention,
+        "metric_embedding_backend": metric_backend,
+        "metric_embedding_model": metric_model,
+        "metric_embedding_device": metric_device,
+        "metric_local_files_only": metric_local_files_only,
+        "metric_hash_dim": metric_hash_dim,
     }
 
 
@@ -218,6 +233,7 @@ def main() -> None:
                         model=model,
                         scenario_id=scenario_id,
                         max_steps=max_steps,
+                        rep_index=rep,
                         dotenv=dotenv,
                         enable_branching_probes=enable_branching_probes,
                         probe_interval=probe_interval,

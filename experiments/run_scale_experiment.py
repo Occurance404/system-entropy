@@ -20,10 +20,10 @@ def run_scale_experiment(num_runs=5, output_csv="data/results/scale_experiment_r
         # We use subprocess to run the bash script. 
         try:
             # Construct a single bash command to activate venv and run the script
-            # using run_rescue_experiment.py with rescue DISABLED (raw data)
+            # using experiments/run_rescue_experiment.py with rescue DISABLED (raw data)
             bash_command = (
                 f"source .venv/bin/activate && "
-                f"python run_rescue_experiment.py --scenario_id file_organizer_shock --max_steps 8" 
+                f"python experiments/run_rescue_experiment.py --scenario_id file_organizer_shock --max_steps 8" 
             )
             subprocess.run(["/bin/bash", "-c", bash_command], check=True)
         except subprocess.CalledProcessError as e:
@@ -31,8 +31,8 @@ def run_scale_experiment(num_runs=5, output_csv="data/results/scale_experiment_r
             # Don't continue, try to sleep and recover
             
         # 3. Harvest Data from the Monitor Log
-        # The runner writes to data/logs_rescue/sim_baseline_file_organizer_shock_YYYYMMDD_HHMMSS.jsonl
-        list_of_files = glob.glob('data/logs_rescue/*.jsonl')
+        # The runner writes to logs/rescue/sim_baseline_file_organizer_shock_YYYYMMDD_HHMMSS.jsonl
+        list_of_files = glob.glob('logs/rescue/*.jsonl')
         if not list_of_files:
             print("Warning: No monitor logs found.")
             continue

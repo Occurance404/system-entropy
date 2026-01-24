@@ -33,7 +33,7 @@ export PROBE_MAX_TOKENS=192
 Use the provided example model list:
 
 ```bash
-.venv/bin/python check_model_capabilities.py --models benchmarks/models.ollama.example.json
+.venv/bin/python scripts/check_model_capabilities.py --models benchmarks/models.ollama.example.json
 ```
 
 ## 2) Benchmark sweep (raw CSV)
@@ -41,7 +41,7 @@ Use the provided example model list:
 Recommended (paper-style): shock-only probes, small branch count.
 
 ```bash
-.venv/bin/python run_benchmark.py \
+.venv/bin/python experiments/run_benchmark.py \
   --models benchmarks/models.ollama.example.json \
   --suite benchmarks/suite_v2.json \
   --repeats 3 \
@@ -55,7 +55,7 @@ Output lands in `data/results/benchmark_<suite>_<timestamp>.csv`.
 To quickly debug one task end-to-end:
 
 ```bash
-.venv/bin/python run_benchmark.py \
+.venv/bin/python experiments/run_benchmark.py \
   --models benchmarks/models.ollama.example.json \
   --suite benchmarks/suite_v1.json \
   --only-scenarios drug_filter_baseline \
@@ -66,7 +66,7 @@ To quickly debug one task end-to-end:
 ## 3) Aggregate into paper tables (summary CSV)
 
 ```bash
-.venv/bin/python analyze_benchmark.py \
+.venv/bin/python analysis/analyze_benchmark.py \
   --results data/results/benchmark_<suite>_<timestamp>.csv
 ```
 
@@ -81,7 +81,7 @@ This writes `data/results/benchmark_<...>_summary.csv` with:
 If you have a representative run log (`.jsonl`), generate the multi-panel “experiment summary” plot:
 
 ```bash
-.venv/bin/python visualize_results.py --log_file data/logs_terminal_bench/<run>.jsonl
+.venv/bin/python analysis/visualize_results.py --log_file logs/terminal_bench/<run>.jsonl
 ```
 
 By default figures land under `data/results/`.

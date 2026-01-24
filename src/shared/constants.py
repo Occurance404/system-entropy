@@ -2,7 +2,8 @@ import os
 
 # Directory Paths
 DATA_DIR = "data"
-LOGS_DIR = os.path.join(DATA_DIR, "logs_terminal_bench")
+LOGS_ROOT = "logs"
+LOGS_DIR = os.path.join(LOGS_ROOT, "terminal_bench")
 RESULTS_DIR = os.path.join(DATA_DIR, "results")
 RUN_ARTIFACTS_DIR = os.path.join(DATA_DIR, "run_artifacts")
 

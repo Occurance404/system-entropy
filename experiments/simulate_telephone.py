@@ -1,11 +1,14 @@
 import json
 import os
+import sys
 import argparse
 import numpy as np
 from datetime import datetime
 from dotenv import dotenv_values 
 from sentence_transformers import SentenceTransformer
 from scipy.spatial.distance import cosine
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from src.agent.real_agent import OpenAICompatibleAgent
 from src.monitor.probe import StateMonitor
@@ -33,7 +36,7 @@ def run_telephone_game(model_name: str, api_key: str, base_url: str, hops: int =
     print(f"Ground Truth: {ground_truth}\n")
     
     # 3. Logging Setup
-    log_dir = "data/logs_telephone"
+    log_dir = "logs/telephone"
     os.makedirs(log_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = f"{log_dir}/telephone_{timestamp}.jsonl"

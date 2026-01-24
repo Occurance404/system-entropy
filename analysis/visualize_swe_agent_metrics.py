@@ -12,7 +12,7 @@ def load_monitor_log(filepath):
             data.append(json.loads(line))
     return pd.DataFrame(data)
 
-def load_latest_monitor_log(log_dir="data/logs_terminal_bench"):
+def load_latest_monitor_log(log_dir="logs/terminal_bench"):
     list_of_files = glob.glob(f'{log_dir}/tb_monitor_*.jsonl')
     if not list_of_files:
         print(f"No monitor log files found in {log_dir}.")

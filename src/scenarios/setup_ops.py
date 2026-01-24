@@ -6,6 +6,28 @@ import shutil
 from src.scenarios.tasks import data_pipeline
 from src.scenarios.tasks import vision_dataset
 
+def _get_scenario_seed() -> int | None:
+    raw = os.getenv("SCENARIO_SEED")
+    if raw is None:
+        return 0
+    raw = str(raw).strip().lower()
+    if raw in ("", "none", "null", "off", "false", "no"):
+        return None
+    try:
+        return int(raw)
+    except Exception:
+        return 0
+
+def _seed_everything(seed: int | None) -> None:
+    if seed is None:
+        return
+    random.seed(seed)
+    try:
+        import numpy as np
+        np.random.seed(seed)
+    except Exception:
+        pass
+
 def _reset_sandbox_dir(base_path: str) -> None:
     """
     Ensures each run starts from a clean sandbox to keep experiments independent.
@@ -36,6 +58,7 @@ def _reset_sandbox_dir(base_path: str) -> None:
 
 def setup_drug_filter(base_path: str):
     """Creates the environment for the Drug Filter scenario."""
+    _seed_everything(_get_scenario_seed())
     _reset_sandbox_dir(base_path)
     
     csv_content = "drug_name,weight,solubility,cost\nA,100,0.5,10\nB,150,0.7,15\nC,200,0.3,20\nD,120,0.8,5\nE,250,0.1,50"
@@ -45,6 +68,7 @@ def setup_drug_filter(base_path: str):
 
 def setup_file_organizer(base_path: str):
     """Creates the environment for the File Organizer scenario."""
+    _seed_everything(_get_scenario_seed())
     _reset_sandbox_dir(base_path)
     
     print(f"Setup: Generating files in {base_path}...")
@@ -82,16 +106,19 @@ def setup_file_organizer(base_path: str):
 
 def setup_data_pipeline(base_path: str):
     """Creates the environment for the Data Pipeline scenario."""
+    _seed_everything(_get_scenario_seed())
     _reset_sandbox_dir(base_path)
-    data_pipeline.setup_environment(base_path)
+    data_pipeline.setup_environment(base_path, seed=_get_scenario_seed())
 
 def setup_vision_dataset(base_path: str):
     """Creates the environment for the Vision Defect scenario."""
+    _seed_everything(_get_scenario_seed())
     _reset_sandbox_dir(base_path)
-    vision_dataset.setup_environment(base_path)
+    vision_dataset.setup_environment(base_path, seed=_get_scenario_seed())
 
 def setup_legacy_refactor(base_path: str):
     """Creates the environment for the Legacy Refactoring challenge."""
+    _seed_everything(_get_scenario_seed())
     _reset_sandbox_dir(base_path)
     
     # 1. Create the CSV data
@@ -134,6 +161,7 @@ process()
 
 def setup_dirty_data(base_path: str):
     """Generates a nightmare data file for the Dirty Data challenge."""
+    _seed_everything(_get_scenario_seed())
     _reset_sandbox_dir(base_path)
     file_path = os.path.join(base_path, "corrupt_logs.raw")
     
@@ -165,6 +193,7 @@ def setup_dirty_data(base_path: str):
 
 def setup_startup_acquisition(base_path: str):
     """Generates a messy, multi-format legacy dataset for the Acquisition Challenge."""
+    _seed_everything(_get_scenario_seed())
     _reset_sandbox_dir(base_path)
     os.makedirs(os.path.join(base_path, "legacy_data"), exist_ok=True)
     

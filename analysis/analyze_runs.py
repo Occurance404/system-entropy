@@ -86,7 +86,7 @@ def analyze_run(df: pd.DataFrame, output_dir: str):
     # 6. Load Drift Summary
     if "run_id" in df.columns:
         run_id = df["run_id"].iloc[0]
-        summary_path = f"data/logs_terminal_bench/run_{run_id}_summary.json"
+        summary_path = f"logs/terminal_bench/run_{run_id}_summary.json"
         if os.path.exists(summary_path):
             print("\n--- Drift Summary ---")
             with open(summary_path, "r") as f:

@@ -14,6 +14,7 @@ Formula: `SCR = Avg(CosineDistance(Embedding(Branch_i), Embedding(Branch_j)))`
 - Higher SCR indicates higher semantic divergence between branches (often confusion/instability, sometimes exploration).
 - Lower SCR indicates collapse to a single line of reasoning (can be confidence *or* brittle dogmatism).
 - `SCR = 0` means branches are (near) identical; it does not imply correctness.
+- **Offline note:** If the SentenceTransformer model is not available locally, the framework falls back to a deterministic hashing embedder (lexical proxy). This keeps SCR/RDI available without network access, but it is not a semantic embedding.
 
 ## 3. Entropy (H)
 Measures the uncertainty in the agent's token prediction distribution.
@@ -28,3 +29,4 @@ Measures the repetitiveness of the agent's output using `zlib`.
 ## 5. Regressive Debt Index (RDI)
 (Experimental) Measures how much the agent's current plan deviates from a known "good" trajectory or ground truth.
 Formula: `RDI = CosineDistance(Current_Plan_Embedding, Ground_Truth_Embedding)`
+- **Offline note:** Like SCR, RDI may use the hashing fallback when semantic embeddings are unavailable.

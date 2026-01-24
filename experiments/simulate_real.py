@@ -9,6 +9,8 @@ import uuid
 from datetime import datetime
 from dotenv import dotenv_values 
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from src.orchestrator.engine import Orchestrator
 from src.monitor.terminal_bench_monitor import get_monitor
 from src.agent.real_agent import OpenAICompatibleAgent 
@@ -115,7 +117,7 @@ def run_real_simulation(scenario_id: str, max_steps: int, cheap: bool = False):
     print(f"Summary saved to: {summary_file}")
     print(f"Max Drift: {summary['max_drift']:.4f}")
 
-    print(f"\n--- Simulation Complete. Logs in data/logs_terminal_bench/ ---")
+    print(f"\n--- Simulation Complete. Logs in logs/terminal_bench/ ---")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Entropic Stress-Test Simulation.")

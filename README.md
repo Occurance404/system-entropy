@@ -23,32 +23,32 @@ A research framework to study how LLM-based agents behave under non-stationary t
 ## Running Experiments
 - Baseline or Rescue run (with perturbations, optional handoff):
   ```bash
-  python run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20            # baseline
-  python run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20 --enable_rescue
+  python experiments/run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20            # baseline
+  python experiments/run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20 --enable_rescue
   ```
 - Hard mode (no rescue, periodic probes):
   ```bash
-  python run_hard_mode.py --scenario_id hard_coding_challenge --max_steps 20 --probe_interval 3
+  python experiments/run_hard_mode.py --scenario_id hard_coding_challenge --max_steps 20 --probe_interval 3
   ```
 - Real simulation with a remote model (uses `.env`):
   ```bash
-  python simulate_real.py --scenario_id drug_filter_shock --max_steps 10
-  python simulate_real.py --scenario_id drug_filter_baseline --max_steps 50 --cheap  # disables probes + stops on validator success
+  python experiments/simulate_real.py --scenario_id drug_filter_shock --max_steps 10
+  python experiments/simulate_real.py --scenario_id drug_filter_baseline --max_steps 50 --cheap  # disables probes + stops on validator success
   ```
 - Smoke test (plumbing/logging sanity):
   ```bash
-  python smoke_test.py
+  python scripts/smoke_test.py
   ```
 - Scale experiment (slow, aggregates logs):
   ```bash
-  python run_scale_experiment.py --num_runs 5
+  python experiments/run_scale_experiment.py --num_runs 5
   ```
 - TerminalBench harness (requires Docker, proxy):
   ```bash
-  ./run_tb_task.sh --task-id bank-trans-filter
+  ./scripts/run_tb_task.sh --task-id bank-trans-filter
   ```
 
-Logs land under `data/logs_rescue/`, `data/logs_hard_mode/`, or `data/logs_terminal_bench/`; sandboxes live under `data/sandbox_<scenario>/`.
+Logs land under `logs/rescue/`, `logs/hard_mode/`, or `logs/terminal_bench/`; sandboxes live under `data/sandbox_<scenario>/`.
 Per-run manifests and summaries land under `data/run_artifacts/<run_id>/`.
 
 ## Core Concepts
@@ -67,8 +67,8 @@ Defined in `src/scenarios/definitions.py` with setup ops in `src/scenarios/setup
 
 ## Repo Structure
 - `src/agent/` agents; `src/orchestrator/` control loop; `src/services/` metrics; `src/tools/` tool registry; `src/connectors/` Docker sandbox.
-- `run_*.py`, `simulate*.py`: experiment runners.
-- `docs/metrics.md`, `real.md`, `THESIS_*`, `FINAL_REPORT.md`: documentation/thesis material.
+- `experiments/`: experiment runners; `analysis/`: plots + aggregation helpers; `scripts/`: ops utilities.
+- `docs/metrics.md`, `paper/`, `thesis/`, `archive/legacy_docs/`: documentation/thesis material.
 - `data/`: sandboxes, logs, results (ignored in git; generated).
 
 ## Testing
@@ -78,14 +78,17 @@ pytest
 ```
 Smoke test for logging:
 ```bash
-python smoke_test.py
+python scripts/smoke_test.py
 ```
 
 ## Notes
 - Generated artifacts (logs/results/sandboxes) are ignored via `.gitignore`.
-- Embedding model load failures degrade SCR/RDI to `None`/`None`; check console for warnings.
+- SCR/RDI use SentenceTransformers when available; if the embedding model is not cached locally, the framework falls back to a deterministic hashing embedder so runs stay offline-friendly.
+- Control the embedding behavior with `SCR_EMBEDDING_BACKEND=auto|st|hash` and `SCR_LOCAL_FILES_ONLY=1|0` (default: `1`, no downloads).
 - For production-style runs, set `PROXY_AUTH_TOKEN` and start `src/llm_proxy.py` before agents.
 - If Docker is unavailable, set `SANDBOX_BACKEND=local` (or leave `auto` to fall back) to run sandboxes directly on your machine.
+- For paper datasets, set `SANDBOX_PER_RUN=1` to prevent runs from overwriting the same `data/sandbox_<scenario>` directory.
+- For deterministic inputs across runs, set `SCENARIO_SEED=0` (or vary it intentionally to measure robustness).
 - If a provider rejects `logprobs`, set `REQUEST_LOGPROBS=off` (default `auto` disables logprobs after the first rejection).
 - If a provider rejects OpenAI tool calling (`tools` / `tool_choice`), set `REQUEST_TOOLS=off` to use text-based JSON tool calls (default `auto` falls back after the first rejection).
 - Optional: expose validator failures back to the agent with `VALIDATION_FEEDBACK=on` (default `off`).

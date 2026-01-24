@@ -1,8 +1,12 @@
 import json
 import os
+import sys
 import uuid
 import argparse
 from datetime import datetime
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from src.orchestrator.engine import Orchestrator
 from src.monitor.terminal_bench_monitor import get_monitor
 from src.agent.mock_agent import ScriptedAgent

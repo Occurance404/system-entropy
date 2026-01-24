@@ -5,6 +5,8 @@ import argparse
 from datetime import datetime
 from dotenv import dotenv_values 
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from src.orchestrator.engine import Orchestrator
 from src.services.metrics import EmbeddingMetricService
 from src.agent.real_agent import OpenAICompatibleAgent
@@ -19,14 +21,14 @@ def run_hard_mode_experiment(
     autonomous: bool = False,
     cheap: bool = False,
 ):
-    # Load environment variables
+    # Load environment variables (System env takes priority over .env)
     config = dotenv_values(".env")
     
-    api_key = config.get("VLLM_API_KEY") or os.getenv("VLLM_API_KEY")
-    base_url = config.get("VLLM_BASE_URL") or os.getenv("VLLM_BASE_URL")
+    api_key = os.getenv("VLLM_API_KEY") or config.get("VLLM_API_KEY")
+    base_url = os.getenv("VLLM_BASE_URL") or config.get("VLLM_BASE_URL")
     
-    # Default to user provided model or env var or deepseek-chat
-    primary_model = model_name or config.get("VLLM_MODEL_NAME", "deepseek-chat") 
+    # Default to user provided model or env var or config
+    primary_model = model_name or os.getenv("VLLM_MODEL_NAME") or config.get("VLLM_MODEL_NAME", "deepseek-chat") 
     
     print(f"--- Starting HARD MODE Experiment: {scenario_id} ---")
     print(f"Model: {primary_model}")
@@ -41,7 +43,7 @@ def run_hard_mode_experiment(
     # 1. Initialize Components
     metric_service = EmbeddingMetricService()
     
-    # Initialize Monitor (Logs to data/logs_terminal_bench/)
+    # Initialize Monitor (Logs to logs/terminal_bench/)
     metrics_monitor = TerminalBenchMonitor()
     print(f"Logging via Monitor to: {metrics_monitor.log_file}")
     
@@ -63,6 +65,7 @@ def run_hard_mode_experiment(
 
     try:
         # Initialize Orchestrator with intervention DISABLED and periodic probing ENABLED
+        # Smart Logic: We want Probes (SCR) AND Validation (Stopping)
         orchestrator = Orchestrator(
             scenario_id=scenario_id, 
             agent=agent, 
@@ -70,9 +73,12 @@ def run_hard_mode_experiment(
             metrics_monitor=metrics_monitor, # Pass the monitor here
             enable_intervention=False, # Strict "No Rescue" rule
             probe_interval=probe_interval,
-            enable_validation=cheap,
-            stop_on_success=cheap,
-            enable_branching_probes=not cheap,
+            # Enable validation if 'cheap' OR 'autonomous' is set
+            enable_validation=(cheap or autonomous),
+            # Stop if validator passes (if autonomous/cheap)
+            stop_on_success=(cheap or autonomous),
+            # Only disable probes if specifically in 'cheap' mode
+            enable_branching_probes=(not cheap),
         )
     except ValueError as e:
         print(f"Error initializing Orchestrator: {e}")

@@ -7,8 +7,8 @@ test:
 	python3 -m pytest -q
 
 run-sim:
-	python3 simulate.py
+	python3 experiments/simulate.py
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
-	rm -rf data/logs/*.jsonl
+	rm -rf logs/*.jsonl logs/*/*.jsonl

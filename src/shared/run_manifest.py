@@ -35,6 +35,28 @@ def build_manifest(
     log_file: Optional[str] = None,
     config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    env_allowlist = [
+        "SANDBOX_BACKEND",
+        "SANDBOX_PER_RUN",
+        "SANDBOX_PYTHON",
+        "RESET_SANDBOX",
+        "SCENARIO_SEED",
+        "REQUEST_TOOLS",
+        "REQUEST_LOGPROBS",
+        "VALIDATION_FEEDBACK",
+        "MAX_COMPLETION_TOKENS",
+        "PROBE_MAX_TOKENS",
+        "VLLM_BASE_URL",
+        "VLLM_MODEL_NAME",
+        "RESCUE_BASE_URL",
+        "RESCUE_MODEL_NAME",
+        "SCR_EMBEDDING_BACKEND",
+        "SCR_EMBEDDING_MODEL",
+        "SCR_EMBEDDING_DEVICE",
+        "SCR_LOCAL_FILES_ONLY",
+        "SCR_HASH_DIM",
+    ]
+    env_snapshot = {k: os.getenv(k) for k in env_allowlist if os.getenv(k) is not None}
     return {
         "schema_version": 1,
         "run_id": run_id,
@@ -45,5 +67,5 @@ def build_manifest(
         "sandbox_path": sandbox_path,
         "log_file": log_file,
         "config": config or {},
+        "env": env_snapshot,
     }
-

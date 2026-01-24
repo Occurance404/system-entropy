@@ -1,3 +1,6 @@
+import os
+import re
+import hashlib
 import math
 import ast
 import zlib
@@ -21,19 +24,53 @@ class EmbeddingMetricService:
     _model_cache_key = None
 
     def __init__(self, model_name: str = 'all-MiniLM-L6-v2', device: str = 'cpu'):
-        # Singleton Logic: Only load if not already loaded or if config (name/device) changes
-        current_key = (model_name, device)
+        """
+        Embedding backend selection (env overrides):
+        - SCR_EMBEDDING_BACKEND: auto|st|hash (default: auto)
+        - SCR_EMBEDDING_MODEL: overrides model_name (default: all-MiniLM-L6-v2)
+        - SCR_EMBEDDING_DEVICE: overrides device (default: cpu)
+        - SCR_LOCAL_FILES_ONLY: 1/0; if 1, never downloads (default: 1)
+        - SCR_HASH_DIM: dimension for hashing fallback (default: 1024)
+        """
+        backend = (os.getenv("SCR_EMBEDDING_BACKEND") or "auto").strip().lower()
+        model_name = (os.getenv("SCR_EMBEDDING_MODEL") or model_name).strip()
+        device = (os.getenv("SCR_EMBEDDING_DEVICE") or device).strip()
+        local_files_only = (os.getenv("SCR_LOCAL_FILES_ONLY") or "1").strip().lower() in ("1", "true", "yes", "on")
+
+        self.model_name = model_name
+        self.device = device
+        self.local_files_only = bool(local_files_only)
+        self.embedding_backend = "hash"
+        self.hash_dim = self._parse_int_env("SCR_HASH_DIM", default=1024, min_value=128, max_value=16384)
+
+        if backend in ("hash", "bow", "lexical"):
+            self.embedding_model = None
+            self.embedding_backend = "hash"
+            self.model_name = None
+            return
+
+        # Singleton Logic: Only load if not already loaded or if config (name/device/files-only) changes
+        current_key = (model_name, device, bool(local_files_only))
         if EmbeddingMetricService._shared_model is None or EmbeddingMetricService._model_cache_key != current_key:
-            print(f"MetricService: Loading embedding model {model_name} on {device} (Singleton)...")
+            print(
+                f"MetricService: Loading embedding model {model_name} on {device} "
+                f"(local_files_only={local_files_only}) (Singleton)..."
+            )
             try:
-                EmbeddingMetricService._shared_model = SentenceTransformer(model_name, device=device)
+                EmbeddingMetricService._shared_model = SentenceTransformer(
+                    model_name,
+                    device=device,
+                    local_files_only=local_files_only,
+                )
                 EmbeddingMetricService._model_cache_key = current_key
                 print("MetricService: Embedding model loaded.")
             except Exception as e:
-                print(f"MetricService: Failed to load model: {e}")
+                print(f"MetricService: Failed to load SentenceTransformer model: {e}")
                 EmbeddingMetricService._shared_model = None
-        
+
         self.embedding_model = EmbeddingMetricService._shared_model
+        if self.embedding_model is not None:
+            self.embedding_backend = "st"
 
     def calculate_scr(self, branches: List[str]) -> Optional[float]:
         """
@@ -46,20 +83,25 @@ class EmbeddingMetricService:
         
         Math: Mean Pairwise Cosine Distance (Range: [0, 2]).
         """
-        if not self.embedding_model:
-            return None
-            
         if not branches:
             return None
-        
-        # Encode branches
+
+        if self.embedding_model is not None:
+            # Encode branches via SentenceTransformer
+            try:
+                embeddings = self.embedding_model.encode(branches)
+                embeddings_list = [e.tolist() for e in embeddings]
+                return self._calculate_pairwise_distance(embeddings_list)
+            except Exception as e:
+                print(f"MetricService Error (SCR/SentenceTransformer): {e}")
+                return None
+
+        # Offline fallback: lexical hashing embeddings (always available, deterministic).
         try:
-            embeddings = self.embedding_model.encode(branches)
-            # Convert to list of lists if necessary
-            embeddings_list = [e.tolist() for e in embeddings]
-            return self._calculate_pairwise_distance(embeddings_list)
+            embeddings = self._hash_embed_many(branches, dim=self.hash_dim)
+            return self._calculate_pairwise_distance(embeddings)
         except Exception as e:
-            print(f"MetricService Error (SCR): {e}")
+            print(f"MetricService Error (SCR/HashingFallback): {e}")
             return None
 
     def calculate_rdi(self, current_content: str, ground_truth_text: str) -> Optional[float]:
@@ -70,19 +112,25 @@ class EmbeddingMetricService:
         - It uses Cosine Distance (0 to 1).
         - It does NOT measure completeness (length/coverage), only angular alignment.
         """
-        if not self.embedding_model:
-            return None
-            
         if not current_content.strip() or not ground_truth_text:
             return None
-            
+
+        if self.embedding_model is not None:
+            try:
+                current_emb = self.embedding_model.encode(current_content).tolist()
+                truth_emb = self.embedding_model.encode(ground_truth_text).tolist()
+                return self._safe_cosine_distance(current_emb, truth_emb)
+            except Exception as e:
+                print(f"MetricService Error (RDI/SentenceTransformer): {e}")
+                return None
+
+        # Offline fallback: lexical hashing embeddings (0..2); keep cosine distance semantics.
         try:
-            # Encode individually
-            current_emb = self.embedding_model.encode(current_content).tolist()
-            truth_emb = self.embedding_model.encode(ground_truth_text).tolist()
-            return cosine(current_emb, truth_emb)
+            current_emb = self._hash_embed_one(current_content, dim=self.hash_dim)
+            truth_emb = self._hash_embed_one(ground_truth_text, dim=self.hash_dim)
+            return self._safe_cosine_distance(current_emb, truth_emb)
         except Exception as e:
-            print(f"MetricService Error (RDI): {e}")
+            print(f"MetricService Error (RDI/HashingFallback): {e}")
             return None
 
     def calculate_entropy(self, logprobs: List[Any]) -> Optional[float]:
@@ -158,8 +206,9 @@ class EmbeddingMetricService:
         distances = []
         for i in range(len(embeddings)):
             for j in range(i + 1, len(embeddings)):
-                dist = cosine(embeddings[i], embeddings[j])
-                distances.append(dist)
+                dist = self._safe_cosine_distance(embeddings[i], embeddings[j])
+                if dist is not None and math.isfinite(dist):
+                    distances.append(dist)
         if not distances:
             return 0.0
         return float(np.mean(distances))
@@ -175,3 +224,61 @@ class EmbeddingMetricService:
              if len(parts) > 1:
                 return parts[1].strip()
         return raw_text
+
+    def _safe_cosine_distance(self, a: List[float], b: List[float]) -> Optional[float]:
+        try:
+            va = np.asarray(a, dtype=np.float32)
+            vb = np.asarray(b, dtype=np.float32)
+            na = float(np.linalg.norm(va))
+            nb = float(np.linalg.norm(vb))
+            denom = na * nb
+            if denom <= 0.0 or not math.isfinite(denom):
+                return 0.0
+            sim = float(np.dot(va, vb) / denom)
+            # cosine distance in [0, 2] for general vectors; clip numerical noise.
+            dist = 1.0 - sim
+            if not math.isfinite(dist):
+                return None
+            return float(max(0.0, min(2.0, dist)))
+        except Exception:
+            # Fallback to scipy if anything odd happens.
+            try:
+                dist = float(cosine(a, b))
+                if not math.isfinite(dist):
+                    return None
+                return float(max(0.0, min(2.0, dist)))
+            except Exception:
+                return None
+
+    def _parse_int_env(self, key: str, *, default: int, min_value: int, max_value: int) -> int:
+        raw = os.getenv(key)
+        if raw is None:
+            return default
+        try:
+            value = int(str(raw).strip())
+        except Exception:
+            return default
+        return max(min_value, min(max_value, value))
+
+    _token_re = re.compile(r"[A-Za-z0-9_]+", re.UNICODE)
+
+    def _hash_embed_one(self, text: str, *, dim: int) -> List[float]:
+        vec = np.zeros(dim, dtype=np.float32)
+        if not text:
+            return vec.tolist()
+        tokens = self._token_re.findall(text.lower())
+        if not tokens:
+            return vec.tolist()
+        for tok in tokens:
+            # Stable across runs/Python versions.
+            digest = hashlib.sha256(tok.encode("utf-8")).digest()
+            idx = int.from_bytes(digest[:8], "big") % dim
+            vec[idx] += 1.0
+        vec = np.log1p(vec)
+        norm = float(np.linalg.norm(vec))
+        if norm > 0.0 and math.isfinite(norm):
+            vec /= norm
+        return vec.tolist()
+
+    def _hash_embed_many(self, texts: List[str], *, dim: int) -> List[List[float]]:
+        return [self._hash_embed_one(t, dim=dim) for t in texts]

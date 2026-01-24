@@ -66,7 +66,7 @@ def _extract_log_features(log_file: str) -> Dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Aggregate benchmark CSV into paper-ready tables.")
-    parser.add_argument("--results", required=True, help="CSV produced by run_benchmark.py")
+    parser.add_argument("--results", required=True, help="CSV produced by experiments/run_benchmark.py")
     parser.add_argument("--out", default=None, help="Output CSV path (default: <results>_summary.csv)")
     args = parser.parse_args()
 
@@ -87,7 +87,12 @@ def main() -> None:
             return np.nan
         return float((s == True).mean())  # noqa: E712
 
-    grouped = df.groupby(["model_name", "scenario_id"], dropna=False)
+    group_keys = ["model_name", "scenario_id"]
+    for optional in ["metric_embedding_backend", "metric_embedding_model"]:
+        if optional in df.columns:
+            group_keys.append(optional)
+
+    grouped = df.groupby(group_keys, dropna=False)
     summary = grouped.agg(
         runs=("run_id", "count"),
         success_rate=("validation_passed", _success_rate),
@@ -108,4 +113,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -1,17 +1,21 @@
 import os
+import sys
 import json
 import glob
+import uuid
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from src.orchestrator.engine import Orchestrator
 from src.agent.mock_agent import ScriptedAgent
 from src.services.metrics import EmbeddingMetricService
 from src.monitor.terminal_bench_monitor import get_monitor
-import uuid
 
 def run_smoke_test():
     print("--- Starting Smoke Test ---")
     
     # Clean logs
-    log_dir = "data/logs_terminal_bench"
+    log_dir = "logs/terminal_bench"
     if os.path.exists(log_dir):
         for f in glob.glob(f"{log_dir}/*.jsonl"):
             os.remove(f)

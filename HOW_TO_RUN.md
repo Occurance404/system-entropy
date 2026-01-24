@@ -42,9 +42,16 @@ If you want the framework to “just run” across providers with different feat
 # Avoid Docker bottlenecks (runs sandboxes on your machine).
 export SANDBOX_BACKEND=local   # or "auto" (default) to fall back automatically
 
+# Optional: keep each run's sandbox output (prevents overwriting).
+# Recommended for paper datasets.
+export SANDBOX_PER_RUN=1
+
 # Optional: python interpreter used by the `execute_python` tool.
 # Local sandbox defaults to repo `.venv` when available; override here if needed.
 export SANDBOX_PYTHON=python3
+
+# Optional: make scenario inputs deterministic across runs (recommended for benchmarks).
+export SCENARIO_SEED=0
 
 # Avoid logprob bottlenecks (entropy becomes optional).
 export REQUEST_LOGPROBS=auto   # auto|off|on
@@ -82,11 +89,19 @@ export SANDBOX_BACKEND=local
 
 We support two modes: **Baseline** (Observation) and **Rescue** (Intervention).
 
+### Quick sanity check (recommended)
+
+```bash
+python3 scripts/check_setup.py
+```
+
+This reports whether Docker is usable (optional), whether your model endpoint is reachable, and which SCR embedding backend is active (semantic vs offline hashing fallback).
+
 ### Mode A: Baseline (No Rescue)
 Run this to observe how the Primary Agent behaves under stress without interference. This establishes your "Control" group.
 
 ```bash
-python3 run_rescue_experiment.py \
+python3 experiments/run_rescue_experiment.py \
     --scenario_id drug_filter_shock \
     --max_steps 20
 ```
@@ -96,7 +111,7 @@ python3 run_rescue_experiment.py \
 Run this to test the Handoff Mechanism. When "Panic" is detected, the system will automatically switch to the Rescue Agent.
 
 ```bash
-python3 run_rescue_experiment.py \
+python3 experiments/run_rescue_experiment.py \
     --scenario_id drug_filter_shock \
     --max_steps 20 \
     --enable_rescue
@@ -105,7 +120,7 @@ python3 run_rescue_experiment.py \
 
 ## 4. Viewing Results
 
-Logs are saved to `data/logs_rescue/`.
+Logs are saved to `logs/rescue/`.
 For orchestrator-based runs that use the unified monitor, per-run artifacts (manifest + summary) are saved under `data/run_artifacts/<run_id>/`.
 
 Each log file is a JSONL file containing step-by-step metrics:
@@ -118,10 +133,10 @@ You can use `grep` to quickly see critical events:
 
 ```bash
 # See when the perturbation happened
-grep "perturbation_triggered" data/logs_rescue/latest_log.jsonl
+grep "perturbation_triggered" logs/rescue/latest_log.jsonl
 
 # See when panic triggered an intervention
-grep "intervention" data/logs_rescue/latest_log.jsonl
+grep "intervention" logs/rescue/latest_log.jsonl
 ```
 
 ## 5. Cheap Mode (Low-Credit Runs)
@@ -129,28 +144,46 @@ grep "intervention" data/logs_rescue/latest_log.jsonl
 If you are low on API credits, prefer runs that disable expensive branching probes and stop early when the validator reports success:
 
 ```bash
-python run_hard_mode.py --scenario_id drug_filter_baseline --max_steps 50 --cheap
-python simulate_real.py --scenario_id drug_filter_baseline --max_steps 50 --cheap
+python experiments/run_hard_mode.py --scenario_id drug_filter_baseline --max_steps 50 --cheap
+python experiments/simulate_real.py --scenario_id drug_filter_baseline --max_steps 50 --cheap
 ```
 
 ## 6. Benchmark Sweeps (Paper Tables)
 
-For multi-model sweeps with deterministic validators, use `run_benchmark.py` + `analyze_benchmark.py`.
+For multi-model sweeps with deterministic validators, use `experiments/run_benchmark.py` + `analysis/analyze_benchmark.py`.
 
 1) Create a models file:
 - Start from `benchmarks/models.paper.template.json` and replace the model IDs.
 - Put keys in `.env` (recommended): `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, etc.
  - Ensure Docker is running and your user can access it (TerminalBench sandbox uses Docker).
 
+### OpenRouter paper sweep (no Docker)
+
+If you’re using OpenRouter and want an end-to-end “paper sweep” (baseline vs shock) with deterministic validators:
+
+1) Create `benchmarks/models.openrouter.paper.json` from `benchmarks/models.openrouter.paper.template.json`.
+2) Set your key:
+```bash
+export OPENROUTER_API_KEY="..."
+```
+3) Run:
+```bash
+./scripts/run_paper_sweep_openrouter.sh benchmarks/models.openrouter.paper.json benchmarks/suite_paper_v1.json 10
+```
+
+Outputs:
+- Raw CSV: `data/results/benchmark_<suite>_<ts>.csv`
+- Packaged dataset: `data/datasets/benchmark_<suite>_<ts>/` (includes logs, manifests, delta table, figures)
+
 2) (Optional) Probe provider capabilities (logprobs + tools):
 ```bash
-python3 check_model_capabilities.py --models benchmarks/models.paper.template.json
-python3 check_model_capabilities.py --models benchmarks/models.ollama.example.json
+python3 scripts/check_model_capabilities.py --models benchmarks/models.paper.template.json
+python3 scripts/check_model_capabilities.py --models benchmarks/models.ollama.example.json
 ```
 
 3) Run a small sweep (cheap-ish defaults):
 ```bash
-python run_benchmark.py \
+python experiments/run_benchmark.py \
   --models benchmarks/models.paper.template.json \
   --suite benchmarks/suite_v1.json \
   --repeats 1 \
@@ -160,5 +193,13 @@ python run_benchmark.py \
 
 4) Aggregate into a summary CSV:
 ```bash
-python analyze_benchmark.py --results data/results/benchmark_v1_<timestamp>.csv
+python analysis/analyze_benchmark.py --results data/results/benchmark_v1_<timestamp>.csv
+```
+
+### One-command local sweep (no Docker)
+
+If you're using a local OpenAI-compatible endpoint (e.g., Ollama) and want a single command that runs a sweep + summary:
+
+```bash
+./scripts/run_paper_sweep_local.sh benchmarks/models.ollama.json benchmarks/suite_v2.json 3
 ```

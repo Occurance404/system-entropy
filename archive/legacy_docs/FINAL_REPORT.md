@@ -45,10 +45,10 @@ cp .env.example .env
 # Edit .env with your VLLM_API_KEY and MODEL_NAME
 
 # 2. Run the Rescue Experiment
-.venv/bin/python run_rescue_experiment.py --max_steps 15
+.venv/bin/python experiments/run_rescue_experiment.py --max_steps 15
 
 # 3. Visualize Results
-.venv/bin/python visualize_results.py
+.venv/bin/python analysis/visualize_results.py
 ```
 The results will be saved to `data/results/experiment_summary.png`.
 

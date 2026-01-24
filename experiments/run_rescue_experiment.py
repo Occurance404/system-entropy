@@ -5,6 +5,8 @@ import argparse
 from datetime import datetime
 from dotenv import dotenv_values 
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from src.orchestrator.engine import Orchestrator
 from src.services.metrics import EmbeddingMetricService
 from src.agent.real_agent import OpenAICompatibleAgent
@@ -61,7 +63,7 @@ def run_rescue_experiment(scenario_id: str, max_steps: int, enable_rescue: bool)
         sys.exit(1)
     
     # 2. Setup Logging
-    log_dir = "data/logs_rescue"
+    log_dir = "logs/rescue"
     os.makedirs(log_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     rescue_tag = "rescued" if enable_rescue else "baseline"
