@@ -97,6 +97,50 @@ python3 scripts/check_setup.py
 
 This reports whether Docker is usable (optional), whether your model endpoint is reachable, and which SCR embedding backend is active (semantic vs offline hashing fallback).
 
+### Managed Session Runner (strongly recommended)
+
+To avoid mixed outputs, run experiments through the session wrapper. Each run gets its own folder with:
+- isolated logs
+- isolated run artifacts/manifests
+- isolated result CSVs
+- command + metadata in `metadata/session.json`
+
+```bash
+.venv/bin/python scripts/run_experiment_session.py \
+  --name rescue_drug_filter_real \
+  --notes "real model baseline run" \
+  -- \
+  .venv/bin/python experiments/run_rescue_experiment.py \
+    --scenario_id drug_filter_shock \
+    --max_steps 20
+```
+
+Session outputs are written to:
+`data/experiments/<timestamp>_<name>/`
+
+### Fair Real-Agent Runner (recommended for clean intelligence evaluation)
+
+Use this when you want to reduce technical noise (tool capability mismatch, probe overhead, mixed logs) and give the agent a fair chance:
+
+```bash
+.venv/bin/python scripts/run_fair_real_session.py \
+  --mode rescue_baseline \
+  --scenario_id drug_filter_shock \
+  --max_steps 20
+```
+
+What it does automatically:
+- preflights endpoint reachability
+- probes model support for tools/logprobs and sets `REQUEST_TOOLS` / `REQUEST_LOGPROBS`
+- forces stable defaults (`SANDBOX_BACKEND=local`, `SANDBOX_PER_RUN=1`, `SCENARIO_SEED=0`)
+- runs through the managed session wrapper for isolated artifacts
+
+Modes:
+- `rescue_baseline` (default): real agent, no rescue handoff
+- `rescue`: enables rescue handoff
+- `hard`: hard-mode runner with `--require_real_agent`
+- `simulate`: runs `experiments/simulate_real.py`
+
 ### Mode A: Baseline (No Rescue)
 Run this to observe how the Primary Agent behaves under stress without interference. This establishes your "Control" group.
 
@@ -122,6 +166,8 @@ python3 experiments/run_rescue_experiment.py \
 
 Logs are saved to `logs/rescue/`.
 For orchestrator-based runs that use the unified monitor, per-run artifacts (manifest + summary) are saved under `data/run_artifacts/<run_id>/`.
+If you use the managed session runner, these paths are isolated under:
+`data/experiments/<timestamp>_<name>/logs/...` and `data/experiments/<timestamp>_<name>/run_artifacts/...`.
 
 Each log file is a JSONL file containing step-by-step metrics:
 - **SCR (Semantic Collapse Ratio):** Measures confusion.

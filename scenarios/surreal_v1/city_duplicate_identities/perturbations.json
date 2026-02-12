@@ -1,0 +1,7 @@
+[
+  {
+    "step": 4,
+    "type": "conflict",
+    "instruction": "CHANGE: Primary keys are no longer unique; identity must be composite and conflict-aware."
+  }
+]

@@ -1,0 +1,10 @@
+case_id,citation_id,source,stance,weight
+C01,T001,alpha,SUPPORT,5
+C01,T002,beta,OPPOSE,6
+C01,T003,gamma,SUPPORT,2
+C02,T004,alpha,OPPOSE,4
+C02,T005,beta,SUPPORT,5
+C02,T006,gamma,OPPOSE,3
+C03,T007,alpha,SUPPORT,3
+C03,T008,beta,SUPPORT,2
+C03,T009,gamma,OPPOSE,6

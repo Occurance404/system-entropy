@@ -20,7 +20,8 @@ def run_hard_mode_experiment(
     model_name: str = None,
     autonomous: bool = False,
     cheap: bool = False,
-):
+    require_real_agent: bool = False,
+)-> int:
     # Load environment variables (System env takes priority over .env)
     config = dotenv_values(".env")
     
@@ -59,6 +60,10 @@ def run_hard_mode_experiment(
         except Exception as e:
             print(f"Failed to initialize Real Agent: {e}")
     
+    if not agent and require_real_agent:
+        print("ERROR: Could not initialize real agent and --require_real_agent is set.")
+        sys.exit(1)
+
     if not agent:
         print("WARNING: No API Key found or Agent init failed. Falling back to ScriptedAgent (Mock).")
         agent = ScriptedAgent(model_name="mock-agent")
@@ -77,6 +82,7 @@ def run_hard_mode_experiment(
             enable_validation=(cheap or autonomous),
             # Stop if validator passes (if autonomous/cheap)
             stop_on_success=(cheap or autonomous),
+            stop_on_agent_done=autonomous,
             # Only disable probes if specifically in 'cheap' mode
             enable_branching_probes=(not cheap),
         )
@@ -85,43 +91,46 @@ def run_hard_mode_experiment(
         sys.exit(1)
     
     # 2. Simulation Loop
-    stop_phrases = ["task is complete", "final summary", "mission accomplished", "completing the task"]
-    
-    for i in range(max_steps):
-        print(f"\n[Step {i+1}] Executing...")
-        
-        try:
-            step_result_dict = orchestrator.step()
+    fatal_error = None
+    try:
+        for i in range(max_steps):
+            print(f"\n[Step {i+1}] Executing...")
             
-            # Console Feedback
-            event = step_result_dict.get('event_type', 'unknown')
-            print(f"  Event Type: {event}")
-            
-            if event == 'periodic_probe':
-                    print(f"  (Silent Probe) SCR: {step_result_dict.get('scr', 'N/A')}")
-            elif event == 'panic_detected':
-                    print(f"  !!! PANIC DETECTED (Ignored) !!! Entropy: {step_result_dict.get('current_entropy')}")
-            
-            # Autonomous Stopping Logic
-            if autonomous and event == 'llm_reply':
-                content = step_result_dict.get('content', '')
-                if isinstance(content, str):
-                    content_lower = content.lower()
-                    if any(phrase in content_lower for phrase in stop_phrases):
-                        print("\n[AUTONOMOUS STOP] Agent signaled task completion.")
-                        print(f"Reason: Found stop phrase in: '{content[:100]}...'")
-                        break
-            if step_result_dict.get("task_complete") or event == "task_complete":
-                print("\n[TASK COMPLETE] Validator signaled success.")
-                break
+            try:
+                step_result_dict = orchestrator.step()
+                
+                # Console Feedback
+                event = step_result_dict.get('event_type', 'unknown')
+                print(f"  Event Type: {event}")
+                
+                if event == 'periodic_probe':
+                        print(f"  (Silent Probe) SCR: {step_result_dict.get('scr', 'N/A')}")
+                elif event == 'panic_detected':
+                        print(f"  !!! PANIC DETECTED (Ignored) !!! Entropy: {step_result_dict.get('current_entropy')}")
+                
+                if step_result_dict.get("task_complete") or event == "task_complete":
+                    print("\n[TASK COMPLETE] Validator signaled success.")
+                    break
 
+            except Exception as e:
+                print(f"CRITICAL ERROR at Step {i+1}: {e}")
+                import traceback
+                traceback.print_exc()
+                fatal_error = e
+                break
+    finally:
+        try:
+            if getattr(orchestrator, "connector", None):
+                orchestrator.connector.stop()
         except Exception as e:
-            print(f"CRITICAL ERROR at Step {i+1}: {e}")
-            import traceback
-            traceback.print_exc()
-            break
+            print(f"WARNING: Failed to stop sandbox connector cleanly: {e}")
+
+    if fatal_error is not None:
+        print(f"\n--- Hard Mode Experiment Failed. Check {metrics_monitor.log_file} ---")
+        return 2
 
     print(f"\n--- Hard Mode Experiment Complete. Check {metrics_monitor.log_file} ---")
+    return 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Hard Mode (No Rescue) Experiment.")
@@ -131,14 +140,17 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default=None, help="Model name to use")
     parser.add_argument("--autonomous", action="store_true", help="Stop automatically when agent says 'Task is complete'.")
     parser.add_argument("--cheap", action="store_true", help="Disable probes and stop on validator success.")
+    parser.add_argument("--require_real_agent", action="store_true", help="Fail instead of falling back to ScriptedAgent.")
     
     args = parser.parse_args()
     
-    run_hard_mode_experiment(
+    exit_code = run_hard_mode_experiment(
         scenario_id=args.scenario_id, 
         max_steps=args.max_steps, 
         probe_interval=args.probe_interval,
         model_name=args.model,
         autonomous=args.autonomous,
         cheap=args.cheap,
+        require_real_agent=args.require_real_agent,
     )
+    raise SystemExit(exit_code)

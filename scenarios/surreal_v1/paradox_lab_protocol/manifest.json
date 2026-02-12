@@ -1,0 +1,9 @@
+{
+  "scenario_id": "paradox_lab_protocol",
+  "title": "Paradox Lab Protocol",
+  "version": 1,
+  "seed": 0,
+  "inputs": [],
+  "expected": [],
+  "notes": "Fill inputs/expected file lists with SHA256 hashes before production runs."
+}

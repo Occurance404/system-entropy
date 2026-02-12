@@ -1,0 +1,486 @@
+{
+  "cards": [
+    {
+      "type": "episode",
+      "id": "episode:commit_02043e208e1fd156e0dd51e47de4e12b79555af3",
+      "title": "Paper-ready benchmarks: offline metrics, OpenRouter sweep, dataset packaging",
+      "summary": "Paper-ready benchmarks: offline metrics, OpenRouter sweep, dataset packaging",
+      "files": [
+        ".gitignore",
+        "Agentic entropy.pdf",
+        "HOW_TO_RUN.md",
+        "Makefile",
+        "README.md",
+        "analysis/analyze_benchmark.py",
+        "analysis/analyze_runs.py",
+        "analysis/analyze_shock_deltas.py",
+        "analysis/generate_comparison_table.py",
+        "analysis/package_benchmark.py",
+        "analysis/plot_paper_figures.py",
+        "analysis/visualize_aggregate.py",
+        "analysis/visualize_comparison.py",
+        "analysis/visualize_results.py",
+        "analysis/visualize_scale_results.py",
+        "analysis/visualize_swe_agent_metrics.py",
+        "archive/legacy_docs/FINAL_REPORT.md",
+        "benchmarks/models.ollama.example.json",
+        "benchmarks/models.openrouter.paper.template.json",
+        "benchmarks/suite_paper_v1.json",
+        "data/results/entropy_comparison.png",
+        "data/results/experiment_summary.png",
+        "data/results/mini_swe_agent_metrics.png",
+        "docs/PAPER_STRONG_CLAIM_PLAN.md",
+        "docs/metrics.md",
+        "experiments/run_benchmark.py",
+        "experiments/run_hard_mode.py",
+        "experiments/run_rescue_experiment.py",
+        "experiments/run_scale_experiment.py",
+        "experiments/simulate.py",
+        "experiments/simulate_real.py",
+        "experiments/simulate_telephone.py",
+        "paper/CONFERENCE_PAPER.md",
+        "paper/CONFERENCE_PAPER.tex",
+        "paper/PAPER_RUNSHEET.md",
+        "scripts/check_model_capabilities.py",
+        "scripts/check_setup.py",
+        "scripts/example_universal_agent.py",
+        "scripts/run_hard_experiments.sh",
+        "scripts/run_hard_probe.sh",
+        "scripts/run_paper_sweep_local.sh",
+        "scripts/run_paper_sweep_openrouter.sh",
+        "scripts/run_shock_experiment.sh",
+        "scripts/run_tb_task.sh",
+        "scripts/run_universal_agent.sh",
+        "scripts/smoke_test.py",
+        "src/agent/real_agent.py",
+        "src/orchestrator/core/orchestrator.py",
+        "src/scenarios/setup_ops.py",
+        "src/scenarios/tasks/data_pipeline.py",
+        "src/scenarios/tasks/vision_dataset.py",
+        "src/services/metrics.py",
+        "src/shared/constants.py",
+        "src/shared/run_manifest.py",
+        "tests/test_metrics_offline_fallback.py",
+        "visualize_results.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "02043e208e1fd156e0dd51e47de4e12b79555af3"
+        }
+      ],
+      "timestamp": 1769262591000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_a10c6291ad2cc8d07ebbd110916ff7c101a51bf2",
+      "title": "Fix(validator): improve float comparison and debug output; Config: update for Qwen 2.5 Coder",
+      "summary": "Fix(validator): improve float comparison and debug output; Config: update for Qwen 2.5 Coder",
+      "files": [
+        "benchmarks/models.ollama.example.json",
+        "src/scenarios/validation_ops.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "a10c6291ad2cc8d07ebbd110916ff7c101a51bf2"
+        }
+      ],
+      "timestamp": 1767632403000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_72436144ab854b7aa5b4d2b8bb4676a58028132f",
+      "title": "Add --only-scenarios filter for quick debug runs",
+      "summary": "Add --only-scenarios filter for quick debug runs",
+      "files": [
+        "docs/PAPER_RUNSHEET.md",
+        "run_benchmark.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "72436144ab854b7aa5b4d2b8bb4676a58028132f"
+        }
+      ],
+      "timestamp": 1767246054000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_5d87c4d18436685ab7ec24741cfcf9a8ff939d29",
+      "title": "Harden local tool execution (newline unescape, venv python)",
+      "summary": "Harden local tool execution (newline unescape, venv python)",
+      "files": [
+        "HOW_TO_RUN.md",
+        "docs/PAPER_RUNSHEET.md",
+        "src/tools/definitions.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "5d87c4d18436685ab7ec24741cfcf9a8ff939d29"
+        }
+      ],
+      "timestamp": 1767245946000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_9cfe610c5562155041bc207a2886fd4ab912211a",
+      "title": "Add max token caps for agent and probes",
+      "summary": "Add max token caps for agent and probes",
+      "files": [
+        "HOW_TO_RUN.md",
+        "docs/PAPER_RUNSHEET.md",
+        "src/agent/real_agent.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "9cfe610c5562155041bc207a2886fd4ab912211a"
+        }
+      ],
+      "timestamp": 1767164119000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_46e3aa80e13da71b0e6c4e2eba48cd62a97dabad",
+      "title": "Optional validator feedback; fix tool history roles",
+      "summary": "Optional validator feedback; fix tool history roles",
+      "files": [
+        "HOW_TO_RUN.md",
+        "README.md",
+        "docs/PAPER_RUNSHEET.md",
+        "src/orchestrator/core/orchestrator.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "46e3aa80e13da71b0e6c4e2eba48cd62a97dabad"
+        }
+      ],
+      "timestamp": 1767163990000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_c8825d514a7b63357d239387c6a9a7830b745996",
+      "title": "Fix runsheet visualize_results flag",
+      "summary": "Fix runsheet visualize_results flag",
+      "files": [
+        "docs/PAPER_RUNSHEET.md"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "c8825d514a7b63357d239387c6a9a7830b745996"
+        }
+      ],
+      "timestamp": 1767113996000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_1cf64b0c31e6428080e80e9aae08fcb8a48bb04d",
+      "title": "Make runs non-blocking; modularize orchestrator",
+      "summary": "Make runs non-blocking; modularize orchestrator",
+      "files": [
+        ".gitignore",
+        "CONFERENCE_PAPER.md",
+        "HOW_TO_RUN.md",
+        "README.md",
+        "benchmarks/models.ollama.example.json",
+        "docs/ARCHITECTURE_V3_DESIGN.md",
+        "docs/PAPER_RUNSHEET.md",
+        "simulate_telephone.py",
+        "src/agent/real_agent.py",
+        "src/monitor/probe.py",
+        "src/orchestrator/core/__init__.py",
+        "src/orchestrator/core/history.py",
+        "src/orchestrator/core/orchestrator.py",
+        "src/orchestrator/core/panic.py",
+        "src/orchestrator/core/probes.py",
+        "src/orchestrator/core/tools.py",
+        "src/orchestrator/engine.py",
+        "tests/test_text_tool_fallback.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "1cf64b0c31e6428080e80e9aae08fcb8a48bb04d"
+        }
+      ],
+      "timestamp": 1767113525000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_06bab5dad94b01b9ef3c146d90e9adede8f78b86",
+      "title": "Stabilize experiment harness and benchmarking",
+      "summary": "Stabilize experiment harness and benchmarking",
+      "files": [
+        ".gitignore",
+        "HOW_TO_RUN.md",
+        "README.md",
+        "analyze_benchmark.py",
+        "benchmarks/models.example.json",
+        "benchmarks/models.paper.template.json",
+        "benchmarks/suite_v1.json",
+        "benchmarks/suite_v2.json",
+        "check_model_capabilities.py",
+        "data/logs/sim_drug_filter_shock_20251124_144224.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_100512.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_100609.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_102820.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_110429.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_112105.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_112812.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_113040.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_113219.jsonl",
+        "data/results/experiment_summary.png",
+        "data/sandbox_data_pipeline_shock/script.py",
+        "data/sandbox_data_pipeline_shock/server_logs.json",
+        "data/sandbox_drug_filter_baseline/drugs.csv",
+        "data/sandbox_drug_filter_shock/drugs.csv",
+        "docker/Dockerfile.agent_sandbox",
+        "docs/ARCHITECTURE_V3_DESIGN.md",
+        "docs/architecture_v2.svg",
+        "docs/architecture_v2_clean.svg",
+        "docs/architecture_v3.svg",
+        "docs/metrics.md",
+        "run_benchmark.py",
+        "run_hard_mode.py",
+        "run_tb_task.sh",
+        "run_universal_agent.sh",
+        "simulate.py",
+        "simulate_real.py",
+        "src/agent/real_agent.py",
+        "src/agent/wrapper.py",
+        "src/connectors/local_connect.py",
+        "src/connectors/tb_connect.py",
+        "src/interfaces.py",
+        "src/llm_proxy.py",
+        "src/monitor/terminal_bench_monitor.py",
+        "src/orchestrator/engine.py",
+        "src/scenarios/definitions.py",
+        "src/scenarios/perturbation_ops.py",
+        "src/scenarios/setup_ops.py",
+        "src/scenarios/validation_ops.py",
+        "src/security/__init__.py",
+        "src/security/secrets.py",
+        "src/services/metrics.py",
+        "src/shared/constants.py",
+        "src/shared/run_manifest.py",
+        "src/tools/definitions.py",
+        "tests/test_integration.py",
+        "tests/test_structure.py",
+        "visualize_results.py",
+        "visualize_swe_agent_metrics.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "06bab5dad94b01b9ef3c146d90e9adede8f78b86"
+        }
+      ],
+      "timestamp": 1766730936000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_9dd7b3040663e122fe51850ed48cd2d1cc0833c0",
+      "title": "Add hard-mode runner and framework refinements",
+      "summary": "Add hard-mode runner and framework refinements",
+      "files": [
+        "README.md",
+        "docker/Dockerfile.datascience",
+        "run_hard_mode.py",
+        "run_scale_experiment.py",
+        "simulate.py",
+        "src/agent/real_agent.py",
+        "src/connectors/tb_connect.py",
+        "src/monitor/terminal_bench_monitor.py",
+        "src/orchestrator/engine.py",
+        "src/scenarios/definitions.py",
+        "src/scenarios/schema.py",
+        "src/scenarios/setup_ops.py",
+        "src/shared/constants.py",
+        "tests/test_integration.py",
+        "visualize_comparison.py",
+        "visualize_results.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "9dd7b3040663e122fe51850ed48cd2d1cc0833c0"
+        }
+      ],
+      "timestamp": 1765690249000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_11963c18aa536e47c04c5590cbf6aac8b2399391",
+      "title": "Add rescue flag to experiment runner and add user documentation",
+      "summary": "Add rescue flag to experiment runner and add user documentation",
+      "files": [
+        "HOW_TO_RUN.md",
+        "run_rescue_experiment.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "11963c18aa536e47c04c5590cbf6aac8b2399391"
+        }
+      ],
+      "timestamp": 1764350840000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_70b162c40cc33a92998e028929e82252bbd80abc",
+      "title": "Refactor: Modularize architecture (Interfaces, MetricService, ToolRegistry) and add Async Probing",
+      "summary": "Refactor: Modularize architecture (Interfaces, MetricService, ToolRegistry) and add Async Probing",
+      "files": [
+        "run_rescue_experiment.py",
+        "smoke_test.py",
+        "src/agent/real_agent.py",
+        "src/connectors/tb_connect.py",
+        "src/interfaces.py",
+        "src/orchestrator/engine.py",
+        "src/scenarios/definitions.py",
+        "src/scenarios/setup_ops.py",
+        "src/scenarios/tasks/score.py",
+        "src/scenarios/tasks/vision_dataset.py",
+        "src/services/metrics.py",
+        "src/tools/base.py",
+        "src/tools/definitions.py",
+        "src/tools/registry.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "70b162c40cc33a92998e028929e82252bbd80abc"
+        }
+      ],
+      "timestamp": 1764345787000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_041e449bc0f4c8e61577ffd84daf2f1dcfa6a3c6",
+      "title": "feat: Generalized framework, RDI metric, and Data Pipeline scenario",
+      "summary": "feat: Generalized framework, RDI metric, and Data Pipeline scenario",
+      "files": [
+        ".gitignore",
+        "FINAL_REPORT.md",
+        "Makefile",
+        "analyze_runs.py",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_100512.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_100609.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_102820.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_110429.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_112105.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_112812.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_113040.jsonl",
+        "data/logs_rescue/rescue_sim_drug_filter_shock_20251126_113219.jsonl",
+        "data/results/experiment_summary.png",
+        "data/sandbox_data_pipeline_shock/script.py",
+        "data/sandbox_data_pipeline_shock/server_logs.json",
+        "data/sandbox_drug_filter_baseline/drugs.csv",
+        "data/sandbox_drug_filter_shock/drugs.csv",
+        "docs/metrics.md",
+        "requirements.txt",
+        "run_rescue_experiment.py",
+        "run_scale_experiment.py",
+        "run_shock_experiment.sh",
+        "run_universal_agent.sh",
+        "simulate.py",
+        "simulate_real.py",
+        "smoke_test.py",
+        "src/agent/real_agent.py",
+        "src/connectors/tb_connect.py",
+        "src/llm_proxy.py",
+        "src/monitor/probe.py",
+        "src/monitor/terminal_bench_monitor.py",
+        "src/orchestrator/engine.py",
+        "src/scenarios/definitions.py",
+        "src/scenarios/setup_ops.py",
+        "src/scenarios/tasks/data_pipeline.py",
+        "src/shared/constants.py",
+        "tests/test_integration.py",
+        "tests/test_structure.py",
+        "visualize_results.py",
+        "visualize_scale_results.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "041e449bc0f4c8e61577ffd84daf2f1dcfa6a3c6"
+        }
+      ],
+      "timestamp": 1764257434000,
+      "trust": "canonical"
+    },
+    {
+      "type": "episode",
+      "id": "episode:commit_704e0893aa7d6fee6a03d5f2a283de5ba7899bd5",
+      "title": "Initial commit: Entropic Stress-Test Framework v1.0",
+      "summary": "Initial commit: Entropic Stress-Test Framework v1.0",
+      "files": [
+        ".gitignore",
+        "Agentic entropy.pdf",
+        "README.md",
+        "data/logs/sim_drug_filter_shock_20251124_144224.jsonl",
+        "data/results/entropy_comparison.png",
+        "data/results/experiment_summary.png",
+        "data/results/mini_swe_agent_metrics.png",
+        "example_universal_agent.py",
+        "pytest.ini",
+        "requirements-api.txt",
+        "requirements-light.txt",
+        "requirements.txt",
+        "run_shock_experiment.sh",
+        "run_tb_task.sh",
+        "run_universal_agent.sh",
+        "simulate.py",
+        "simulate_real.py",
+        "simulate_telephone.py",
+        "src/__init__.py",
+        "src/agent/__init__.py",
+        "src/agent/mock_agent.py",
+        "src/agent/real_agent.py",
+        "src/agent/wrapper.py",
+        "src/connectors/tb_connect.py",
+        "src/llm_proxy.py",
+        "src/monitor/__init__.py",
+        "src/monitor/probe.py",
+        "src/monitor/terminal_bench_monitor.py",
+        "src/orchestrator/__init__.py",
+        "src/orchestrator/engine.py",
+        "src/scenarios/__init__.py",
+        "src/scenarios/definitions.py",
+        "src/scenarios/tasks/file_organizer.py",
+        "test_naive_agent.py",
+        "tests/test_metrics_v2.py",
+        "tests/test_structure.py",
+        "visualize_comparison.py",
+        "visualize_results.py",
+        "visualize_swe_agent_metrics.py"
+      ],
+      "citations": [
+        {
+          "type": "commit",
+          "sha": "704e0893aa7d6fee6a03d5f2a283de5ba7899bd5"
+        }
+      ],
+      "timestamp": 1764091682000,
+      "trust": "canonical"
+    }
+  ],
+  "savedAt": 1770738331174
+}

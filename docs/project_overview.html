@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entropic Stress-Test Framework — Context-Aware Autonomous Developer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent: #10b981;
+            --accent-dim: #059669;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #10b981, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent-dim);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 4rem;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h2::before {
+            content: '';
+            width: 4px;
+            height: 1.5rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--text);
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        /* Problem/Solution Cards */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-dim);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .card-badge {
+            background: var(--accent);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        /* Architecture SVG */
+        .architecture-wrapper {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 2rem 0;
+        }
+
+        .architecture-wrapper svg {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--surface);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        tr:hover td {
+            background: var(--surface);
+        }
+
+        /* Code/Highlight */
+        code {
+            background: var(--surface);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent);
+        }
+
+        /* Flow Diagram (text) */
+        .flow {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            overflow-x: auto;
+            color: var(--text-muted);
+        }
+
+        .flow .highlight {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .flow .danger {
+            color: var(--danger);
+        }
+
+        /* Status Indicator */
+        .status {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-dot.done {
+            background: var(--accent);
+        }
+
+        .status-dot.progress {
+            background: var(--warning);
+        }
+
+        .status-dot.planned {
+            background: var(--text-muted);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Entropic Stress-Test Framework</h1>
+            <p class="subtitle">A reliability engine for autonomous coding agents</p>
+            <span class="badge">Research Project — V3 Architecture</span>
+        </header>
+
+        <!-- THE PROBLEM -->
+        <section>
+            <h2>The Problem</h2>
+            <p>LLM-based coding agents fail silently on long-running tasks. They report high confidence while producing
+                broken output. Current approaches:</p>
+
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🔥</div>
+                        <span class="card-title">Context Rot</span>
+                    </div>
+                    <p>Agents degrade over time — not from lack of knowledge, but from confusion as context accumulates
+                        and requirements shift.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🎭</div>
+                        <span class="card-title">Silent Failures</span>
+                    </div>
+                    <p>Agent says "I fixed it" but nothing changed. Or it loops, repeating the same action. Token-level
+                        entropy doesn't catch this.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">💣</div>
+                        <span class="card-title">Blunt Recovery</span>
+                    </div>
+                    <p>Current fix: "wipe context after 3 failures." This throws away useful diagnostic info and
+                        restarts from scratch.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- WHAT I BUILT -->
+        <section>
+            <h2>What I Built</h2>
+            <p>A framework that <strong>stress-tests agents</strong> with changing requirements (shocks) and measures
+                <strong>Semantic Collapse</strong> — when the agent's reasoning fragments even if it sounds confident.
+            </p>
+
+            <h3>Core Contributions</h3>
+            <table>
+                <tr>
+                    <th>Component</th>
+                    <th>What It Does</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td><code>Orchestrator</code></td>
+                    <td>State machine that injects perturbations and runs branching probes</td>
+                    <td>✅ Implemented</td>
+                </tr>
+                <tr>
+                    <td><code>Branching Probes</code></td>
+                    <td>Fork agent N times, measure divergence via embeddings → SCR metric</td>
+                    <td>✅ Implemented</td>
+                </tr>
+                <tr>
+                    <td><code>Rescue Protocol</code></td>
+                    <td>When SCR spikes or panic counter hits limit, swap to stronger model</td>
+                    <td>✅ Implemented</td>
+                </tr>
+                <tr>
+                    <td><code>Docker Sandbox</code></td>
+                    <td>Isolated execution with real shell, git-tracked filesystem</td>
+                    <td>✅ Implemented</td>
+                </tr>
+            </table>
+
+            <h3>Key Metric: Semantic Collapse Ratio (SCR)</h3>
+            <p>Mean pairwise cosine distance between N parallel agent responses. High SCR = agent is "fractured" —
+                different branches give wildly different answers. Low SCR = consistent (could be consistently wrong, but
+                at least coherent).</p>
+        </section>
+
+        <!-- V3 ARCHITECTURE -->
+        <section>
+            <h2>V3 Architecture — The Plan</h2>
+            <p>Moving beyond measurement to <strong>active intervention</strong>. Six new components address gaps in
+                current reliability approaches:</p>
+
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🔍</div>
+                        <span class="card-title">Action Classifier</span>
+                        <span class="card-badge">NEW</span>
+                    </div>
+                    <p>Detects what agent <em>actually</em> did: <code>EDITED</code>, <code>REASONED</code>,
+                        <code>FAILED</code>, or <code>LOOPED</code>. Catches "talked but didn't act" failures.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <span class="card-title">Token Budget Manager</span>
+                        <span class="card-badge">NEW</span>
+                    </div>
+                    <p>Priority-based context allocation. Errors never dropped. Lower priority items (embeddings)
+                        dropped entirely before truncating critical info.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🔄</div>
+                        <span class="card-title">Graduated Recovery</span>
+                        <span class="card-badge">NEW</span>
+                    </div>
+                    <p>5-level escalation: prune → summarize → wipe → swap driver → rollback. Try cheap fixes before
+                        nuking everything.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🚦</div>
+                        <span class="card-title">Failure Taxonomy Router</span>
+                        <span class="card-badge">NEW</span>
+                    </div>
+                    <p>Different failures get different responses. Syntax error → rollback. Test fail → add to context.
+                        Loop → wipe.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🔗</div>
+                        <span class="card-title">Multi-File Coherence</span>
+                        <span class="card-badge">NEW</span>
+                    </div>
+                    <p>Tracks cross-file dependencies. Detects when editing <code>utils.py</code> breaks
+                        <code>main.py</code> before tests run.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">⚡</div>
+                        <span class="card-title">Semantic Drift Detector</span>
+                        <span class="card-badge">NEW</span>
+                    </div>
+                    <p>Pattern-matches diffs for logic inversions: <code>&gt;</code> ↔ <code>&lt;</code>,
+                        <code>and</code> ↔ <code>or</code>. Catches bugs that pass syntax checks.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- DEEP DIVE: NEW COMPONENTS -->
+        <section>
+            <h2>V3 Components — Deep Dive</h2>
+
+            <h3>1. Action Classifier</h3>
+            <p><strong>What it does:</strong> Watches what the agent <em>actually</em> did, not what it <em>said</em> it
+                did.</p>
+            <p><strong>The problem it solves:</strong> Agent says "I've updated the file" but it didn't call any tool
+                (just talked), the tool errored, or it's repeating the same response in a loop.</p>
+            <p><strong>How it works:</strong> Looks at agent response, tool calls made, and actual workspace diff.
+                Outputs one of: <code>EDITED</code>, <code>REASONED</code>, <code>FAILED</code>, <code>LOOPED</code>.
+                For loop detection: compares current response to last 3 responses — if &gt;85% similar, it's looping.
+            </p>
+            <p><strong>Why you need it:</strong> Without this, you can't tell if the agent is stuck. It might look busy
+                but accomplishing nothing.</p>
+
+            <h3>2. Token Budget Manager</h3>
+            <p><strong>What it does:</strong> Controls exactly what goes into the agent's context window and in what
+                order.</p>
+            <p><strong>The problem it solves:</strong> Context gets too long, something gets cut. Sometimes it's the
+                error message (bad), sometimes it's old search results (fine). No control over what gets cut.</p>
+            <p><strong>How it works:</strong> You set a total budget (e.g., 8K tokens). Each context type has a priority
+                and max allocation. When over budget: drops lowest priority stuff entirely (doesn't half-truncate).
+                Never drops errors — they're priority 1.</p>
+            <p><strong>Why you need it:</strong> Predictable context = predictable agent behavior. No more "it forgot
+                the error message" bugs.</p>
+
+            <h3>3. Graduated Recovery Controller</h3>
+            <p><strong>What it does:</strong> When things go wrong, tries small fixes first before nuking everything.
+            </p>
+            <p><strong>The problem it solves:</strong> V2 approach: "3 failures? Wipe entire context and start fresh."
+                This throws away useful diagnostic info the agent learned.</p>
+            <table>
+                <tr>
+                    <th>Level</th>
+                    <th>Trigger</th>
+                    <th>Action</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>First failure</td>
+                    <td>Prune old tool outputs (&gt;5 steps old)</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Second failure</td>
+                    <td>Summarize old reasoning into a short digest</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Third failure</td>
+                    <td>Full context wipe</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Fourth failure</td>
+                    <td>Swap to a stronger model</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Fifth failure</td>
+                    <td>Git rollback to last working state</td>
+                </tr>
+            </table>
+            <p><strong>Why you need it:</strong> Cheaper interventions often work. No need to nuke from orbit every
+                time.</p>
+
+            <h3>4. Failure Taxonomy Router</h3>
+            <p><strong>What it does:</strong> Different failures get different responses.</p>
+            <p><strong>The problem it solves:</strong> V2 treats all failures the same: "it failed, retry." But a syntax
+                error is different from a test failure is different from the agent looping.</p>
+            <table>
+                <tr>
+                    <th>Failure</th>
+                    <th>Response</th>
+                </tr>
+                <tr>
+                    <td>Syntax error</td>
+                    <td>Rollback that edit, try again</td>
+                </tr>
+                <tr>
+                    <td>Test failure</td>
+                    <td>Add error to context, let agent see it</td>
+                </tr>
+                <tr>
+                    <td>Coherence failure</td>
+                    <td>Inject cross-file references it's missing</td>
+                </tr>
+                <tr>
+                    <td>Same error 3×</td>
+                    <td>Escalate recovery level</td>
+                </tr>
+                <tr>
+                    <td>Agent looping</td>
+                    <td>Wipe context completely</td>
+                </tr>
+                <tr>
+                    <td>Score dropped</td>
+                    <td>Git rollback</td>
+                </tr>
+            </table>
+            <p><strong>Why you need it:</strong> Right response to right problem. Don't wipe context just because of a
+                typo.</p>
+
+            <h3>5. Multi-File Coherence Index</h3>
+            <p><strong>What it does:</strong> Tracks which files depend on which other files.</p>
+            <p><strong>The problem it solves:</strong> Agent edits <code>utils.py</code>, changes a function signature.
+                But <code>main.py</code> still calls with the old signature. Tests might catch this... eventually.</p>
+            <p><strong>How it works:</strong> Parses each file's function signatures and imports. Builds a map of
+                dependencies. When a function changes, checks if callers are now broken. Flags issues before tests even
+                run.</p>
+            <p><strong>Why you need it:</strong> Catches cross-file breaks immediately, not after a confusing test
+                failure.</p>
+
+            <h3>6. Semantic Drift Detector</h3>
+            <p><strong>What it does:</strong> Catches logic bugs that pass syntax checks.</p>
+            <p><strong>The problem it solves:</strong> Agent changes <code>if price &gt; 100</code> to
+                <code>if price &lt; 100</code>. Syntax is valid, tests might pass if edge case not covered, but logic is
+                completely inverted.</p>
+            <p><strong>How it works:</strong> Scans the diff for "semantic flip" patterns like <code>&gt;</code> ↔
+                <code>&lt;</code>, <code>and</code> ↔ <code>or</code>, <code>==</code> ↔ <code>!=</code>. Flags as
+                "warning: possible logic inversion." Optional LLM sanity check.</p>
+            <p><strong>Why you need it:</strong> Some of the worst bugs are invisible to syntax checkers and test
+                suites.</p>
+        </section>
+
+        <!-- EXISTING COMPONENTS -->
+        <section>
+            <h2>Existing Components (Already Built)</h2>
+            <p>These components form the foundation that V3 builds upon:</p>
+
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🎛️</div>
+                        <span class="card-title">Orchestrator</span>
+                    </div>
+                    <p>The main loop controller. State machine that manages the agent lifecycle and coordinates all
+                        other components.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">💾</div>
+                        <span class="card-title">Memory Store</span>
+                    </div>
+                    <p>Persistent state via <code>STATE.json</code> (current goal) and <code>EVENTS.jsonl</code>
+                        (append-only history log).</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">👁️</div>
+                        <span class="card-title">Observer</span>
+                    </div>
+                    <p>Captures diffs and stdout/stderr from each step. Feeds data to Context Engine and Validation
+                        Layer.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📸</div>
+                        <span class="card-title">Git Checkpoint Manager</span>
+                    </div>
+                    <p>Transaction semantics for edits. <code>snapshot()</code> after each step,
+                        <code>rollback(n)</code> to restore.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📦</div>
+                        <span class="card-title">Context Builder</span>
+                    </div>
+                    <p>Assembles the context pack from multiple sources. Now enhanced with Token Budget Manager.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🔗</div>
+                        <span class="card-title">Hard/Soft References</span>
+                    </div>
+                    <p>Hard: Stack traces, git diff, import graphs. Soft: grep/ripgrep, embeddings. Priority-ordered.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🤖</div>
+                        <span class="card-title">Agent Driver</span>
+                    </div>
+                    <p>The LLM wrapper. Supports swappable backends (DeepSeek, Codex, GPT-4, Claude).</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🐳</div>
+                        <span class="card-title">Sandbox Workspace</span>
+                    </div>
+                    <p>Docker or local execution environment. Isolated, git-tracked filesystem with auto-commit per
+                        step.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">✅</div>
+                        <span class="card-title">Lazy Validator</span>
+                    </div>
+                    <p>Auto-runs project tests (<code>pytest</code>, <code>npm test</code>, <code>cargo test</code>).
+                        Returns PASS/FAIL/REGRESSION.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ARCHITECTURE DIAGRAM -->
+        <section>
+            <h2>System Architecture</h2>
+            <div class="architecture-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="950" viewBox="0 0 1400 950">
+                    <defs>
+                        <style>
+                            .zone {
+                                fill: #f8fafc;
+                                stroke: #e2e8f0;
+                                stroke-width: 1;
+                                rx: 12;
+                            }
+
+                            .zone-header {
+                                font: 700 13px Inter, system-ui, sans-serif;
+                                fill: #64748b;
+                                letter-spacing: 0.5px;
+                            }
+
+                            .box {
+                                fill: #ffffff;
+                                stroke: #cbd5e1;
+                                stroke-width: 1.5;
+                                rx: 6;
+                            }
+
+                            .box-new {
+                                fill: #ecfdf5;
+                                stroke: #10b981;
+                                stroke-width: 2;
+                                rx: 6;
+                            }
+
+                            .title {
+                                font: 700 20px Inter, system-ui, sans-serif;
+                                fill: #0f172a;
+                            }
+
+                            .subtitle {
+                                font: 400 12px Inter, system-ui, sans-serif;
+                                fill: #64748b;
+                            }
+
+                            .label {
+                                font: 600 13px Inter, system-ui, sans-serif;
+                                fill: #1e293b;
+                            }
+
+                            .label-new {
+                                font: 600 13px Inter, system-ui, sans-serif;
+                                fill: #047857;
+                            }
+
+                            .text {
+                                font: 400 11px Inter, system-ui, sans-serif;
+                                fill: #475569;
+                            }
+
+                            .badge {
+                                font: 700 9px Inter, system-ui, sans-serif;
+                                fill: white;
+                            }
+
+                            .badge-bg {
+                                fill: #10b981;
+                                rx: 3;
+                            }
+
+                            .arrow {
+                                stroke: #94a3b8;
+                                stroke-width: 1.5;
+                                fill: none;
+                                marker-end: url(#arrow);
+                            }
+
+                            .arrow-recovery {
+                                stroke: #ef4444;
+                                stroke-width: 2;
+                                stroke-dasharray: 6 3;
+                                fill: none;
+                                marker-end: url(#arrowRed);
+                            }
+
+                            .flow-label {
+                                font: 500 10px Inter, system-ui, sans-serif;
+                                fill: #64748b;
+                            }
+                        </style>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6"
+                            orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                        </marker>
+                        <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6"
+                            orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+                        </marker>
+                    </defs>
+
+                    <text x="40" y="35" class="title">Context-Aware Autonomous Developer (V3)</text>
+                    <text x="40" y="55" class="subtitle">Green boxes = New components | Red dashed = Recovery
+                        paths</text>
+
+                    <!-- ZONE 1: INFRASTRUCTURE -->
+                    <rect x="30" y="75" width="300" height="580" class="zone" />
+                    <text x="50" y="100" class="zone-header">INFRASTRUCTURE</text>
+
+                    <rect x="50" y="120" width="260" height="80" class="box" />
+                    <text x="70" y="145" class="label">Orchestrator</text>
+                    <text x="70" y="165" class="text">State machine, loop control</text>
+                    <text x="70" y="180" class="text">Recovery policy routing</text>
+
+                    <rect x="50" y="215" width="260" height="60" class="box" />
+                    <text x="70" y="240" class="label">Memory Store</text>
+                    <text x="70" y="258" class="text">STATE.json + EVENTS.jsonl</text>
+
+                    <rect x="50" y="290" width="260" height="80" class="box-new" />
+                    <rect x="50" y="290" width="32" height="14" class="badge-bg" />
+                    <text x="56" y="300" class="badge">NEW</text>
+                    <text x="70" y="325" class="label-new">Action Classifier</text>
+                    <text x="70" y="343" class="text">Detects: EDITED | REASONED | FAILED | LOOPED</text>
+                    <text x="70" y="358" class="text">Catches transition failures</text>
+
+                    <rect x="50" y="385" width="260" height="110" class="box-new" />
+                    <rect x="50" y="385" width="32" height="14" class="badge-bg" />
+                    <text x="56" y="395" class="badge">NEW</text>
+                    <text x="70" y="420" class="label-new">Graduated Recovery</text>
+                    <text x="70" y="440" class="text">L1: Prune stale outputs</text>
+                    <text x="70" y="455" class="text">L2: Summarize old reasoning</text>
+                    <text x="70" y="470" class="text">L3: Context wipe</text>
+                    <text x="70" y="485" class="text">L4: Driver swap | L5: Git rollback</text>
+
+                    <rect x="50" y="510" width="260" height="60" class="box" />
+                    <text x="70" y="535" class="label">Observer</text>
+                    <text x="70" y="553" class="text">Captures diffs + stdout/stderr</text>
+
+                    <rect x="50" y="585" width="260" height="60" class="box" />
+                    <text x="70" y="610" class="label">Git Checkpoint Manager</text>
+                    <text x="70" y="628" class="text">snapshot() / rollback(n)</text>
+
+                    <!-- ZONE 2: CONTEXT ENGINE -->
+                    <rect x="350" y="75" width="300" height="580" class="zone" />
+                    <text x="370" y="100" class="zone-header">CONTEXT ENGINE</text>
+
+                    <rect x="370" y="120" width="260" height="60" class="box" />
+                    <text x="390" y="145" class="label">Context Builder</text>
+                    <text x="390" y="163" class="text">Compiles prioritized Context Pack</text>
+
+                    <rect x="370" y="195" width="260" height="80" class="box-new" />
+                    <rect x="370" y="195" width="32" height="14" class="badge-bg" />
+                    <text x="376" y="205" class="badge">NEW</text>
+                    <text x="390" y="230" class="label-new">Token Budget Manager</text>
+                    <text x="390" y="248" class="text">Priority-based allocation</text>
+                    <text x="390" y="263" class="text">Error &gt; Stack &gt; Imports &gt; Grep</text>
+
+                    <rect x="370" y="290" width="260" height="80" class="box"
+                        style="stroke-width: 2.5; stroke: #475569;" />
+                    <text x="390" y="315" class="label">Hard References (P1-P3)</text>
+                    <text x="390" y="333" class="text">Stack traces, git diff</text>
+                    <text x="390" y="348" class="text">Import graph, symbol defs</text>
+                    <text x="390" y="363" class="text" style="font-weight: 600;">Never dropped</text>
+
+                    <rect x="370" y="385" width="260" height="60" class="box" style="stroke-dasharray: 4 3;" />
+                    <text x="390" y="410" class="label">Soft References (P4-P5)</text>
+                    <text x="390" y="428" class="text">Lexical search, embeddings (fallback)</text>
+
+                    <rect x="370" y="460" width="260" height="70" class="box-new" />
+                    <rect x="370" y="460" width="32" height="14" class="badge-bg" />
+                    <text x="376" y="470" class="badge">NEW</text>
+                    <text x="390" y="495" class="label-new">Multi-File Coherence</text>
+                    <text x="390" y="513" class="text">Cross-file dependency tracking</text>
+
+                    <rect x="370" y="545" width="260" height="70" class="box-new" />
+                    <rect x="370" y="545" width="32" height="14" class="badge-bg" />
+                    <text x="376" y="555" class="badge">NEW</text>
+                    <text x="390" y="580" class="label-new">Semantic Drift Detector</text>
+                    <text x="390" y="598" class="text">Logic inversions (&gt; vs &lt;, AND/OR)</text>
+
+                    <!-- ZONE 3: EXECUTION -->
+                    <rect x="670" y="75" width="300" height="280" class="zone" />
+                    <text x="690" y="100" class="zone-header">EXECUTION</text>
+
+                    <rect x="690" y="120" width="260" height="80" class="box" />
+                    <text x="710" y="145" class="label">Agent Driver (Swappable)</text>
+                    <text x="710" y="165" class="text">Primary: DeepSeek / Codex</text>
+                    <text x="710" y="183" class="text">Rescue: GPT-4 / Claude</text>
+
+                    <rect x="690" y="215" width="260" height="100" class="box" />
+                    <text x="710" y="240" class="label">Sandbox Workspace</text>
+                    <text x="710" y="260" class="text">Docker or local sandbox</text>
+                    <text x="710" y="278" class="text">Git-tracked filesystem</text>
+                    <text x="710" y="296" class="text">Auto-commit per step</text>
+
+                    <!-- ZONE 4: VALIDATION -->
+                    <rect x="990" y="75" width="380" height="480" class="zone" />
+                    <text x="1010" y="100" class="zone-header">VALIDATION</text>
+
+                    <rect x="1010" y="120" width="340" height="70" class="box" />
+                    <text x="1030" y="145" class="label">Lazy Validator</text>
+                    <text x="1030" y="163" class="text">Project tests (pytest/npm/cargo)</text>
+                    <text x="1030" y="178" class="text">Returns: PASS | FAIL | REGRESSION</text>
+
+                    <rect x="1010" y="205" width="340" height="60" class="box-new" />
+                    <rect x="1010" y="205" width="32" height="14" class="badge-bg" />
+                    <text x="1016" y="215" class="badge">NEW</text>
+                    <text x="1030" y="240" class="label-new">Pre-Commit Validator</text>
+                    <text x="1030" y="258" class="text">Syntax check before commit</text>
+
+                    <rect x="1010" y="280" width="340" height="60" class="box-new" />
+                    <rect x="1010" y="280" width="32" height="14" class="badge-bg" />
+                    <text x="1016" y="290" class="badge">NEW</text>
+                    <text x="1030" y="315" class="label-new">Coherence Validator</text>
+                    <text x="1030" y="333" class="text">Cross-file type/import consistency</text>
+
+                    <rect x="1010" y="355" width="340" height="60" class="box" />
+                    <text x="1030" y="380" class="label">Score Tracker</text>
+                    <text x="1030" y="398" class="text">Tracks pass rate, detects edit churn</text>
+
+                    <rect x="1010" y="430" width="340" height="100" class="box-new" />
+                    <rect x="1010" y="430" width="32" height="14" class="badge-bg" />
+                    <text x="1016" y="440" class="badge">NEW</text>
+                    <text x="1030" y="465" class="label-new">Failure Taxonomy Router</text>
+                    <text x="1030" y="485" class="text">SYNTAX_ERROR: Rollback</text>
+                    <text x="1030" y="500" class="text">TEST_FAIL: Add to context</text>
+                    <text x="1030" y="515" class="text">STAGNATION: Escalate recovery</text>
+
+                    <!-- Flow Arrows -->
+                    <line x1="310" y1="160" x2="370" y2="160" class="arrow" />
+                    <text x="320" y="152" class="flow-label">1. Request</text>
+
+                    <line x1="630" y1="150" x2="690" y2="150" class="arrow" />
+                    <text x="640" y="142" class="flow-label">2. Pack</text>
+
+                    <line x1="820" y1="200" x2="820" y2="215" class="arrow" />
+
+                    <line x1="950" y1="265" x2="1010" y2="265" class="arrow" />
+                    <text x="955" y="257" class="flow-label">3. Diff</text>
+
+                    <polyline points="1180,530 1180,620 500,620 500,570 310,540" class="arrow" />
+                    <text x="750" y="610" class="flow-label">4. Verdict + Logs</text>
+
+                    <line x1="180" y1="510" x2="180" y2="200" class="arrow" />
+                    <text x="185" y="350" class="flow-label">5. Status</text>
+
+                    <!-- Recovery Paths -->
+                    <polyline points="1010,480 900,480 900,670 180,670 180,495" class="arrow-recovery" />
+                    <text x="450" y="660" class="flow-label" style="fill: #ef4444; font-weight: 600;">RECOVERY: Failure
+                        triggers graduated response</text>
+
+                    <polyline points="310,615 820,615 820,315" class="arrow-recovery" />
+                    <text x="500" y="607" class="flow-label" style="fill: #ef4444;">ROLLBACK</text>
+
+                    <polyline points="180,120 180,60 820,60 820,120" class="arrow-recovery" />
+                    <text x="400" y="52" class="flow-label" style="fill: #ef4444;">DRIVER SWAP (Escalate to stronger
+                        model)</text>
+
+                    <!-- Legend -->
+                    <rect x="670" y="380" width="300" height="130" class="zone" />
+                    <text x="690" y="405" class="zone-header">LEGEND</text>
+                    <rect x="690" y="420" width="20" height="14" class="box" />
+                    <text x="720" y="431" class="text">Existing component</text>
+                    <rect x="690" y="440" width="20" height="14" class="box-new" />
+                    <text x="720" y="451" class="text">New in V3</text>
+                    <line x1="690" y1="470" x2="710" y2="470" class="arrow" />
+                    <text x="720" y="474" class="text">Normal flow</text>
+                    <line x1="690" y1="490" x2="710" y2="490" class="arrow-recovery" />
+                    <text x="720" y="494" class="text">Recovery path</text>
+                </svg>
+            </div>
+        </section>
+
+        <!-- STATUS -->
+        <section>
+            <h2>Project Status</h2>
+            <div class="status">
+                <div class="status-item">
+                    <span class="status-dot done"></span>
+                    <span>Orchestrator + Scenarios</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot done"></span>
+                    <span>SCR Metric + Branching Probes</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot done"></span>
+                    <span>Docker Sandbox</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot done"></span>
+                    <span>Rescue Protocol</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-dot planned"></span>
+                    <span>V3 Components (Planned)</span>
+                </div>
+            </div>
+
+            <h3>Implementation Priority</h3>
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Components</th>
+                    <th>Rationale</th>
+                </tr>
+                <tr>
+                    <td>Phase 1</td>
+                    <td>Action Classifier, Token Budget Manager</td>
+                    <td>Quick wins — cheap to build, high signal</td>
+                </tr>
+                <tr>
+                    <td>Phase 2</td>
+                    <td>Graduated Recovery, Failure Router</td>
+                    <td>Core recovery logic — makes the system resilient</td>
+                </tr>
+                <tr>
+                    <td>Phase 3</td>
+                    <td>Multi-File Coherence, Semantic Drift</td>
+                    <td>Advanced detection — requires AST parsing</td>
+                </tr>
+            </table>
+        </section>
+
+        <footer>
+            Entropic Stress-Test Framework &mdash; Research project exploring agent reliability under non-stationary
+            tasks
+        </footer>
+    </div>
+
+</body>
+
+</html>

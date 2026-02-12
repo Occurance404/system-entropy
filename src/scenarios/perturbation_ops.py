@@ -90,9 +90,71 @@ def _apply_drug_filter_api_stub(sandbox_path: str) -> None:
             )
 
 
+def _swap_file(sandbox_path: str, src_name: str, dst_name: str) -> None:
+    src = os.path.join(sandbox_path, src_name)
+    dst = os.path.join(sandbox_path, dst_name)
+    if not os.path.exists(src):
+        return
+    with open(src, "r", encoding="utf-8") as f:
+        payload = f.read()
+    with open(dst, "w", encoding="utf-8") as f:
+        f.write(payload)
+
+
+def _apply_archive_dates_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "calendar_offsets_v2.json", "active_calendar_offsets.json")
+
+
+def _apply_museum_taxonomy_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "taxonomy_v2.json", "active_taxonomy.json")
+
+
+def _apply_dream_court_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "source_trust_v2.json", "active_source_trust.json")
+
+
+def _apply_lunar_cargo_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "constraints_v2.json", "active_constraints.json")
+    _swap_file(sandbox_path, "unit_profile_v2.json", "active_unit_profile.json")
+
+
+def _apply_paradox_lab_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "lab_status_v2.json", "active_lab_status.json")
+
+
+def _apply_oracle_contract_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "rules_v2.json", "active_rules.json")
+
+
+def _apply_city_identity_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "identity_policy_v2.json", "active_identity_policy.json")
+
+
+def _apply_signal_mirror_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "ordering_policy_v2.json", "active_ordering_policy.json")
+
+
+def _apply_missing_axiom_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "axioms_v2.json", "active_axioms.json")
+
+
+def _apply_bureau_policy_shock(sandbox_path: str) -> None:
+    _swap_file(sandbox_path, "policy_v2.json", "active_policy.json")
+
+
 PERTURBATION_OPS: Dict[Tuple[str, int], Callable[[str], None]] = {
     ("data_pipeline_shock", 4): _apply_data_pipeline_schema_change,
     ("drug_filter_shock", 4): _apply_drug_filter_api_stub,
+    ("archive_impossible_dates", 4): _apply_archive_dates_shock,
+    ("museum_renamed_species", 4): _apply_museum_taxonomy_shock,
+    ("dream_court_transcript", 4): _apply_dream_court_shock,
+    ("lunar_cargo_ritual", 4): _apply_lunar_cargo_shock,
+    ("paradox_lab_protocol", 4): _apply_paradox_lab_shock,
+    ("oracle_contract_amendment", 4): _apply_oracle_contract_shock,
+    ("city_duplicate_identities", 4): _apply_city_identity_shock,
+    ("signal_mirror_logs", 4): _apply_signal_mirror_shock,
+    ("missing_axiom", 4): _apply_missing_axiom_shock,
+    ("bureau_contradictory_forms", 4): _apply_bureau_policy_shock,
 }
 
 
@@ -101,4 +163,3 @@ def apply_perturbation_if_needed(scenario_id: str, step_index: int, sandbox_path
     if not op:
         return
     op(sandbox_path)
-

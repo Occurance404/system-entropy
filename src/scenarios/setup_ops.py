@@ -238,6 +238,77 @@ def setup_startup_acquisition(base_path: str):
         
     print(f"Setup: Messy Startup Data created in {base_path}/legacy_data")
 
+
+def _copy_surreal_inputs(scenario_id: str, base_path: str) -> None:
+    """
+    Copies static scenario inputs from scenarios/surreal_v1/<scenario_id>/inputs
+    into the sandbox directory.
+    """
+    scenario_dir = os.path.join(os.getcwd(), "scenarios", "surreal_v1", scenario_id)
+    inputs_dir = os.path.join(scenario_dir, "inputs")
+    if not os.path.isdir(inputs_dir):
+        raise FileNotFoundError(f"Missing surreal input directory: {inputs_dir}")
+
+    for root, dirs, files in os.walk(inputs_dir):
+        rel = os.path.relpath(root, inputs_dir)
+        dst_root = base_path if rel == "." else os.path.join(base_path, rel)
+        os.makedirs(dst_root, exist_ok=True)
+        for d in dirs:
+            os.makedirs(os.path.join(dst_root, d), exist_ok=True)
+        for name in files:
+            if name == ".gitkeep":
+                continue
+            src = os.path.join(root, name)
+            dst = os.path.join(dst_root, name)
+            shutil.copy2(src, dst)
+
+
+def _setup_surreal(base_path: str, scenario_id: str) -> None:
+    _seed_everything(_get_scenario_seed())
+    _reset_sandbox_dir(base_path)
+    _copy_surreal_inputs(scenario_id, base_path)
+    print(f"Setup: Surreal scenario '{scenario_id}' initialized in {base_path}")
+
+
+def setup_archive_impossible_dates(base_path: str) -> None:
+    _setup_surreal(base_path, "archive_impossible_dates")
+
+
+def setup_museum_renamed_species(base_path: str) -> None:
+    _setup_surreal(base_path, "museum_renamed_species")
+
+
+def setup_dream_court_transcript(base_path: str) -> None:
+    _setup_surreal(base_path, "dream_court_transcript")
+
+
+def setup_lunar_cargo_ritual(base_path: str) -> None:
+    _setup_surreal(base_path, "lunar_cargo_ritual")
+
+
+def setup_paradox_lab_protocol(base_path: str) -> None:
+    _setup_surreal(base_path, "paradox_lab_protocol")
+
+
+def setup_oracle_contract_amendment(base_path: str) -> None:
+    _setup_surreal(base_path, "oracle_contract_amendment")
+
+
+def setup_city_duplicate_identities(base_path: str) -> None:
+    _setup_surreal(base_path, "city_duplicate_identities")
+
+
+def setup_signal_mirror_logs(base_path: str) -> None:
+    _setup_surreal(base_path, "signal_mirror_logs")
+
+
+def setup_missing_axiom(base_path: str) -> None:
+    _setup_surreal(base_path, "missing_axiom")
+
+
+def setup_bureau_contradictory_forms(base_path: str) -> None:
+    _setup_surreal(base_path, "bureau_contradictory_forms")
+
 SCENARIO_SETUP_MAP = {
     "drug_filter_baseline": setup_drug_filter,
     "drug_filter_shock": setup_drug_filter,
@@ -248,5 +319,15 @@ SCENARIO_SETUP_MAP = {
     "vision_defect_shock": setup_vision_dataset,
     "legacy_refactor_challenge": setup_legacy_refactor,
     "dirty_data_challenge": setup_dirty_data,
-    "startup_acquisition_challenge": setup_startup_acquisition
+    "startup_acquisition_challenge": setup_startup_acquisition,
+    "archive_impossible_dates": setup_archive_impossible_dates,
+    "museum_renamed_species": setup_museum_renamed_species,
+    "dream_court_transcript": setup_dream_court_transcript,
+    "lunar_cargo_ritual": setup_lunar_cargo_ritual,
+    "paradox_lab_protocol": setup_paradox_lab_protocol,
+    "oracle_contract_amendment": setup_oracle_contract_amendment,
+    "city_duplicate_identities": setup_city_duplicate_identities,
+    "signal_mirror_logs": setup_signal_mirror_logs,
+    "missing_axiom": setup_missing_axiom,
+    "bureau_contradictory_forms": setup_bureau_contradictory_forms,
 }

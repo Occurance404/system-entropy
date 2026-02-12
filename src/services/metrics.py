@@ -85,11 +85,16 @@ class EmbeddingMetricService:
         """
         if not branches:
             return None
+        # Treat empty/whitespace-only branches as unusable probe outputs.
+        # We need at least two non-empty branches to compute pairwise distance.
+        cleaned_branches = [str(b).strip() for b in branches if str(b).strip()]
+        if len(cleaned_branches) < 2:
+            return None
 
         if self.embedding_model is not None:
             # Encode branches via SentenceTransformer
             try:
-                embeddings = self.embedding_model.encode(branches)
+                embeddings = self.embedding_model.encode(cleaned_branches)
                 embeddings_list = [e.tolist() for e in embeddings]
                 return self._calculate_pairwise_distance(embeddings_list)
             except Exception as e:
@@ -98,7 +103,7 @@ class EmbeddingMetricService:
 
         # Offline fallback: lexical hashing embeddings (always available, deterministic).
         try:
-            embeddings = self._hash_embed_many(branches, dim=self.hash_dim)
+            embeddings = self._hash_embed_many(cleaned_branches, dim=self.hash_dim)
             return self._calculate_pairwise_distance(embeddings)
         except Exception as e:
             print(f"MetricService Error (SCR/HashingFallback): {e}")

@@ -12,8 +12,8 @@ set -euo pipefail
 #   repeats     = 3
 #
 # Outputs:
-#   - Raw results CSV: data/results/benchmark_<suite>_<ts>.csv
-#   - Summary CSV:     data/results/benchmark_<suite>_<ts>_summary.csv
+#   - Raw results CSV: ${EXPERIMENT_RESULTS_DIR:-data/results}/benchmark_<suite>_<ts>.csv
+#   - Summary CSV:     ${EXPERIMENT_RESULTS_DIR:-data/results}/benchmark_<suite>_<ts>_summary.csv
 
 MODELS_JSON="${1:-benchmarks/models.ollama.json}"
 SUITE_JSON="${2:-benchmarks/suite_v2.json}"
@@ -42,7 +42,10 @@ echo "  sandbox:  ${SANDBOX_BACKEND}"
 echo "  tools:    ${REQUEST_TOOLS}"
 echo "  logprobs: ${REQUEST_LOGPROBS}"
 
-OUT_PATH="$("$PY" -c "from datetime import datetime; import json; import os; suite=json.load(open('$SUITE_JSON')); sid=suite.get('suite_id','suite'); ts=datetime.now().strftime('%Y%m%d_%H%M%S'); print(os.path.join('data','results',f'benchmark_{sid}_{ts}.csv'))")"
+RESULTS_ROOT="${EXPERIMENT_RESULTS_DIR:-data/results}"
+mkdir -p "$RESULTS_ROOT"
+
+OUT_PATH="$("$PY" -c "from datetime import datetime; import json; import os; suite=json.load(open('$SUITE_JSON')); sid=suite.get('suite_id','suite'); ts=datetime.now().strftime('%Y%m%d_%H%M%S'); print(os.path.join('$RESULTS_ROOT',f'benchmark_{sid}_{ts}.csv'))")"
 
 "$PY" experiments/run_benchmark.py \
   --models "$MODELS_JSON" \

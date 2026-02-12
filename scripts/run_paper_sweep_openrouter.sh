@@ -45,8 +45,11 @@ echo "  logprobs: ${REQUEST_LOGPROBS}"
 
 SUITE_ID="$("$PY" -c "import json; suite=json.load(open('$SUITE_JSON')); print(suite.get('suite_id','suite'))")"
 TS="$(date +%Y%m%d_%H%M%S)"
-OUT_PATH="data/results/benchmark_${SUITE_ID}_${TS}.csv"
-DATASET_DIR="data/datasets/benchmark_${SUITE_ID}_${TS}"
+RESULTS_ROOT="${EXPERIMENT_RESULTS_DIR:-data/results}"
+DATASETS_ROOT="${EXPERIMENT_DATASETS_DIR:-data/datasets}"
+mkdir -p "$RESULTS_ROOT" "$DATASETS_ROOT"
+OUT_PATH="${RESULTS_ROOT}/benchmark_${SUITE_ID}_${TS}.csv"
+DATASET_DIR="${DATASETS_ROOT}/benchmark_${SUITE_ID}_${TS}"
 
 "$PY" experiments/run_benchmark.py \
   --models "$MODELS_JSON" \

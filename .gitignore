@@ -39,6 +39,7 @@ data/logs_hard_mode/
 logs/rescue/
 logs/hard_mode/
 data/run_artifacts/
+data/experiments/
 data/archive/
 data/sandbox_*/
 

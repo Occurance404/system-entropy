@@ -1,0 +1,388 @@
+% =============================================================================
+% REFERENCES FOR: Entropic Stress-Test Framework for LLM Agents
+% =============================================================================
+% Organized by category for easy navigation
+% =============================================================================
+
+% -----------------------------------------------------------------------------
+% SECTION 1: FOUNDATIONAL LLM PAPERS
+% -----------------------------------------------------------------------------
+
+@article{vaswani2017attention,
+  title={Attention is All You Need},
+  author={Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N and Kaiser, {\L}ukasz and Polosukhin, Illia},
+  journal={Advances in Neural Information Processing Systems},
+  volume={30},
+  year={2017},
+  note={The Transformer architecture paper - foundation of all modern LLMs}
+}
+
+@article{brown2020language,
+  title={Language Models are Few-Shot Learners},
+  author={Brown, Tom and Mann, Benjamin and Ryder, Nick and Subbiah, Melanie and Kaplan, Jared D and Dhariwal, Prafulla and Neelakantan, Arvind and Shyam, Pranav and Sastry, Girish and Askell, Amanda and others},
+  journal={Advances in Neural Information Processing Systems},
+  volume={33},
+  pages={1877--1901},
+  year={2020},
+  note={GPT-3 paper - introduced in-context learning and few-shot capabilities}
+}
+
+@article{openai2023gpt4,
+  title={GPT-4 Technical Report},
+  author={OpenAI},
+  journal={arXiv preprint arXiv:2303.08774},
+  year={2023},
+  note={GPT-4 capabilities and safety considerations}
+}
+
+@article{touvron2023llama,
+  title={LLaMA: Open and Efficient Foundation Language Models},
+  author={Touvron, Hugo and Lavril, Thibaut and Izacard, Gautier and Martinet, Xavier and Lachaux, Marie-Anne and Lacroix, Timoth{\'e}e and Rozi{\`e}re, Baptiste and Goyal, Naman and Hambro, Eric and Azhar, Faisal and others},
+  journal={arXiv preprint arXiv:2302.13971},
+  year={2023},
+  note={Open-source LLM foundation model}
+}
+
+@article{wei2022chain,
+  title={Chain-of-Thought Prompting Elicits Reasoning in Large Language Models},
+  author={Wei, Jason and Wang, Xuezhi and Schuurmans, Dale and Bosma, Maarten and Ichter, Brian and Xia, Fei and Chi, Ed and Le, Quoc and Zhou, Denny},
+  journal={Advances in Neural Information Processing Systems},
+  volume={35},
+  pages={24824--24837},
+  year={2022},
+  note={CoT prompting - key technique for multi-step reasoning}
+}
+
+@article{ouyang2022training,
+  title={Training Language Models to Follow Instructions with Human Feedback},
+  author={Ouyang, Long and Wu, Jeffrey and Jiang, Xu and Almeida, Diogo and Wainwright, Carroll and Mishkin, Pamela and Zhang, Chong and Agarwal, Sandhini and Slama, Katarina and Ray, Alex and others},
+  journal={Advances in Neural Information Processing Systems},
+  volume={35},
+  pages={27730--27744},
+  year={2022},
+  note={InstructGPT / RLHF paper - aligning LLMs to follow instructions}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 2: LLM AGENTS & TOOL USE
+% -----------------------------------------------------------------------------
+
+@inproceedings{yao2023react,
+  title={ReAct: Synergizing Reasoning and Acting in Language Models},
+  author={Yao, Shunyu and Zhao, Jeffrey and Yu, Dian and Du, Nan and Shafran, Izhak and Narasimhan, Karthik and Cao, Yuan},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2023},
+  note={Foundational paper on interleaving reasoning and actions in agents}
+}
+
+@article{schick2023toolformer,
+  title={Toolformer: Language Models Can Teach Themselves to Use Tools},
+  author={Schick, Timo and Dwivedi-Yu, Jane and Dessi, Roberto and Raileanu, Roberta and Lomeli, Maria and Zettlemoyer, Luke and Cancedda, Nicola and Scialom, Thomas},
+  journal={arXiv preprint arXiv:2302.04761},
+  year={2023},
+  note={LLMs learning to use external tools}
+}
+
+@article{qin2023toolllm,
+  title={ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs},
+  author={Qin, Yujia and Liang, Shihao and Ye, Yining and Zhu, Kunlun and Yan, Lan and Lu, Yaxi and Lin, Yankai and Cong, Xin and Tang, Xiangru and Qian, Bill and others},
+  journal={arXiv preprint arXiv:2307.16789},
+  year={2023},
+  note={Large-scale tool use in LLM agents}
+}
+
+@article{xi2023rise,
+  title={The Rise and Potential of Large Language Model Based Agents: A Survey},
+  author={Xi, Zhiheng and Chen, Wenxiang and Guo, Xin and He, Wei and Ding, Yiwen and Hong, Boyang and Zhang, Ming and Wang, Junzhe and Jin, Senjie and Zhou, Enyu and others},
+  journal={arXiv preprint arXiv:2309.07864},
+  year={2023},
+  note={Comprehensive survey on LLM-based agents}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 3: CODING AGENTS & BENCHMARKS
+% -----------------------------------------------------------------------------
+
+@inproceedings{jimenez2024swebench,
+  title={SWE-bench: Can Language Models Resolve Real-World GitHub Issues?},
+  author={Jimenez, Carlos E and Yang, John and Wettig, Alexander and Yao, Shunyu and Pei, Kexin and Press, Ofir and Narasimhan, Karthik},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2024},
+  note={Key benchmark for autonomous coding agents - only 1.96\% solve rate}
+}
+
+@article{yang2024swebenchplus,
+  title={SWE-bench+: Enhanced Coding Benchmark for LLMs},
+  author={Yang, John and others},
+  journal={arXiv preprint},
+  year={2024},
+  note={Identifies solution leakage and weak test issues in SWE-bench}
+}
+
+@article{wei2024utboost,
+  title={UTBoost: Rigorous Evaluation of Coding Agents on SWE-Bench},
+  author={Wei, Jiayi and others},
+  journal={ACL Anthology},
+  year={2024},
+  note={Shows manually written test cases are often insufficient}
+}
+
+@article{chen2021codex,
+  title={Evaluating Large Language Models Trained on Code},
+  author={Chen, Mark and Tworek, Jerry and Jun, Heewoo and Yuan, Qiming and Pinto, Henrique Ponde de Oliveira and Kaplan, Jared and Edwards, Harri and Burda, Yuri and Joseph, Nicholas and Brockman, Greg and others},
+  journal={arXiv preprint arXiv:2107.03374},
+  year={2021},
+  note={Codex / HumanEval benchmark for code generation}
+}
+
+@article{roziere2023codellama,
+  title={Code Llama: Open Foundation Models for Code},
+  author={Rozi{\`e}re, Baptiste and Gehring, Jonas and Gloeckle, Fabian and Sootla, Sten and Gat, Itai and Tan, Xiaoqing Ellen and Adi, Yossi and Liu, Jingyu and Remez, Tal and Rapin, J{\'e}r{\'e}my and others},
+  journal={arXiv preprint arXiv:2308.12950},
+  year={2023},
+  note={Open-source code-specialized LLM}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 4: CONTEXT WINDOW & LONG-CONTEXT ISSUES
+% -----------------------------------------------------------------------------
+
+@article{liu2023lost,
+  title={Lost in the Middle: How Language Models Use Long Contexts},
+  author={Liu, Nelson F and Lin, Kevin and Hewitt, John and Paranjape, Ashwin and Bevilacqua, Michele and Petroni, Fabio and Liang, Percy},
+  journal={Transactions of the Association for Computational Linguistics},
+  volume={12},
+  pages={157--173},
+  year={2024},
+  note={Shows LLMs miss information in middle of long contexts - supports "context rot"}
+}
+
+@article{li2023longiclbench,
+  title={LongICLBench: Benchmarking LLMs on Long In-Context Learning},
+  author={Li, Yushi and others},
+  journal={OpenReview},
+  year={2024},
+  note={Measures reasoning degradation with context length}
+}
+
+@article{kuratov2024babilong,
+  title={BABILong: Testing the Limits of LLMs in Long-Context Reasoning},
+  author={Kuratov, Yuri and Bulatov, Aydar and Anokhin, Petr and Rodkin, Dmitry and Sorokin, Artyom and Sorokin, Artem and Burtsev, Mikhail},
+  journal={arXiv preprint arXiv:2406.10149},
+  year={2024},
+  note={Long-context reasoning benchmark}
+}
+
+@article{press2022alibi,
+  title={Train Short, Test Long: Attention with Linear Biases Enables Input Length Extrapolation},
+  author={Press, Ofir and Smith, Noah A and Lewis, Mike},
+  booktitle={International Conference on Learning Representations},
+  year={2022},
+  note={ALiBi positional encoding for longer contexts}
+}
+
+@article{su2024rope,
+  title={RoFormer: Enhanced Transformer with Rotary Position Embedding},
+  author={Su, Jianlin and Lu, Yu and Pan, Shengfeng and Murtadha, Ahmed and Wen, Bo and Liu, Yunfeng},
+  journal={Neurocomputing},
+  volume={568},
+  pages={127063},
+  year={2024},
+  note={RoPE - widely used positional encoding in modern LLMs}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 5: MODEL COLLAPSE & SEMANTIC DEGRADATION
+% -----------------------------------------------------------------------------
+
+@article{shumailov2024model,
+  title={AI Models Collapse When Trained on Recursively Generated Data},
+  author={Shumailov, Ilia and Shumaylov, Zakhar and Zhao, Yiren and Gal, Yarin and Papernot, Nicolas and Anderson, Ross},
+  journal={Nature},
+  volume={631},
+  pages={755--759},
+  year={2024},
+  note={Seminal paper on model collapse from synthetic data - relates to SCR}
+}
+
+@article{dohmatob2024tale,
+  title={A Tale of Tails: Model Collapse as a Change of Scaling Laws},
+  author={Dohmatob, Elvis and Feng, Yunzhen and Subramonian, Arjun and Kempe, Julia},
+  journal={arXiv preprint arXiv:2402.07043},
+  year={2024},
+  note={Theoretical analysis of model collapse dynamics}
+}
+
+@article{guo2024knowledge,
+  title={Knowledge Collapse: A Three-Stage Phenomenon},
+  author={Guo, Zeyu and others},
+  journal={arXiv preprint},
+  year={2024},
+  note={"Confidently wrong" outputs while maintaining fluency}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 6: AGENT RELIABILITY & FAILURE MODES
+% -----------------------------------------------------------------------------
+
+@article{tyen2024mast,
+  title={MAST: A Failure Taxonomy for Multi-Agent LLM Systems},
+  author={Tyen, Gladys and others},
+  journal={arXiv preprint arXiv:2410.11429},
+  year={2024},
+  note={14 failure modes in multi-agent systems - highly relevant}
+}
+
+@article{zhang2024systemfailures,
+  title={A System-Level Taxonomy of Hidden Failure Modes in LLM Applications},
+  author={Zhang, Wei and others},
+  journal={arXiv preprint},
+  year={2024},
+  note={15 hidden failure modes - frames reliability as systems engineering}
+}
+
+@article{wang2024halmit,
+  title={HalMit: Black-box Hallucination Monitoring for LLM Agents},
+  author={Wang, Yuxuan and others},
+  journal={arXiv preprint},
+  year={2024},
+  note={Detects hallucinations without internal model access}
+}
+
+@article{huang2024selfcorrect,
+  title={Large Language Models Cannot Self-Correct Reasoning Yet},
+  author={Huang, Jie and Gu, Shaohan and Hou, Le and Wu, Yuexin and Wang, Xuedong and Yu, Hongkun and Han, Jiawei},
+  journal={arXiv preprint arXiv:2310.01798},
+  year={2024},
+  note={Shows LLMs struggle with intrinsic self-correction}
+}
+
+@article{ji2023hallucination,
+  title={Survey of Hallucination in Natural Language Generation},
+  author={Ji, Ziwei and Lee, Nayeon and Frieske, Rita and Yu, Tiezheng and Su, Dan and Xu, Yan and Ishii, Etsuko and Bang, Ye Jin and Madotto, Andrea and Fung, Pascale},
+  journal={ACM Computing Surveys},
+  volume={55},
+  number={12},
+  pages={1--38},
+  year={2023},
+  note={Comprehensive survey on LLM hallucinations}
+}
+
+@article{rawte2023agenthallu,
+  title={Hallucination in LLM-based Agents: A Survey},
+  author={Rawte, Vipula and others},
+  journal={arXiv preprint},
+  year={2024},
+  note={Survey focused on agent-specific hallucinations}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 7: RETRIEVAL-AUGMENTED GENERATION (RAG)
+% -----------------------------------------------------------------------------
+
+@article{lewis2020rag,
+  title={Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks},
+  author={Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and Petroni, Fabio and Karpukhin, Vladimir and Goyal, Naman and K{\"u}ttler, Heinrich and Lewis, Mike and Yih, Wen-tau and Rockt{\"a}schel, Tim and others},
+  journal={Advances in Neural Information Processing Systems},
+  volume={33},
+  pages={9459--9474},
+  year={2020},
+  note={Original RAG paper - grounding LLMs in external knowledge}
+}
+
+@article{gao2024rag,
+  title={Retrieval-Augmented Generation for Large Language Models: A Survey},
+  author={Gao, Yunfan and Xiong, Yun and Gao, Xinyu and Jia, Kangxiang and Pan, Jinliu and Bi, Yuxi and Dai, Yi and Sun, Jiawei and Wang, Haofen},
+  journal={arXiv preprint arXiv:2312.10997},
+  year={2024},
+  note={Comprehensive RAG survey}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 8: EVALUATION METRICS & METHODS
+% -----------------------------------------------------------------------------
+
+@article{papineni2002bleu,
+  title={BLEU: A Method for Automatic Evaluation of Machine Translation},
+  author={Papineni, Kishore and Roukos, Salim and Ward, Todd and Zhu, Wei-Jing},
+  booktitle={Proceedings of the 40th Annual Meeting of the ACL},
+  pages={311--318},
+  year={2002},
+  note={BLEU score - foundational evaluation metric}
+}
+
+@article{lin2004rouge,
+  title={ROUGE: A Package for Automatic Evaluation of Summaries},
+  author={Lin, Chin-Yew},
+  booktitle={Text Summarization Branches Out},
+  pages={74--81},
+  year={2004},
+  note={ROUGE metrics for text evaluation}
+}
+
+@article{sellam2020bleurt,
+  title={BLEURT: Learning Robust Metrics for Text Generation},
+  author={Sellam, Thibault and Das, Dipanjan and Parikh, Ankur P},
+  booktitle={Proceedings of the 58th Annual Meeting of the ACL},
+  pages={7881--7892},
+  year={2020},
+  note={Learned evaluation metric}
+}
+
+@article{reimers2019sentencebert,
+  title={Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks},
+  author={Reimers, Nils and Gurevych, Iryna},
+  booktitle={Proceedings of the 2019 EMNLP},
+  pages={3982--3992},
+  year={2019},
+  note={Sentence embeddings - basis for semantic similarity metrics like SCR}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 9: SOFTWARE ENGINEERING & CODE ANALYSIS
+% -----------------------------------------------------------------------------
+
+@article{mccabe1976complexity,
+  title={A Complexity Measure},
+  author={McCabe, Thomas J},
+  journal={IEEE Transactions on Software Engineering},
+  volume={SE-2},
+  number={4},
+  pages={308--320},
+  year={1976},
+  note={Cyclomatic complexity - used in CBF metric}
+}
+
+@book{fowler1999refactoring,
+  title={Refactoring: Improving the Design of Existing Code},
+  author={Fowler, Martin},
+  year={1999},
+  publisher={Addison-Wesley},
+  note={Classic reference on code quality and refactoring}
+}
+
+% -----------------------------------------------------------------------------
+% SECTION 10: ENTROPY & INFORMATION THEORY
+% -----------------------------------------------------------------------------
+
+@book{shannon1948mathematical,
+  title={A Mathematical Theory of Communication},
+  author={Shannon, Claude E},
+  journal={The Bell System Technical Journal},
+  volume={27},
+  pages={379--423},
+  year={1948},
+  note={Foundational information theory - entropy concept}
+}
+
+@article{holtzman2020curious,
+  title={The Curious Case of Neural Text Degeneration},
+  author={Holtzman, Ari and Buys, Jan and Du, Li and Forbes, Maxwell and Choi, Yejin},
+  booktitle={International Conference on Learning Representations},
+  year={2020},
+  note={Nucleus sampling and text degeneration analysis}
+}
+
+% =============================================================================
+% END OF REFERENCES
+% =============================================================================

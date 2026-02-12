@@ -1,0 +1,70 @@
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Problem Setting}
+We study tool-using language-model agents in \emph{non-stationary} task environments, where objectives can change mid-trajectory. Let a run be a sequence of agent-environment interactions
+\[
+\tau = (s_1, a_1, o_1, \dots, s_T, a_T, o_T),
+\]
+where \(s_t\) is the orchestrator state and dialogue context, \(a_t\) is either a tool action or language reply, and \(o_t\) is sandbox feedback. A perturbation operator \(P_k\) is applied at predetermined step indices \(k\), modifying either requirements, environment state, or both. The core evaluation question is not only whether the final artifact is correct, but whether the agent adapts after \(P_k\) without collapsing into stale or repetitive behavior.
+
+\subsection{Experimental Unit and Controls}
+The atomic unit of analysis is one \((\text{model}, \text{scenario}, \text{seed}, \text{budget})\) run. All runs are executed by the same harness and differ only in controlled independent variables: model identity, scenario, step budget, completion-token cap, and probe configuration. We keep tool surface area fixed and use deterministic validators so correctness labels are not model-dependent.
+
+\subsection{Runtime Architecture}
+The runtime has four modules. The orchestrator (\texttt{src/orchestrator/core/orchestrator.py}) executes the step loop, injects perturbations, and applies stop rules. The agent (\texttt{src/agent/real\_agent.py}) emits either \texttt{tool\_use} or \texttt{llm\_reply}. The sandbox connector executes filesystem/shell operations with deterministic local semantics. Validators and monitors (\texttt{src/scenarios/validation\_ops.py}, \texttt{src/monitor/terminal\_bench\_monitor.py}) provide ground-truth completion checks and per-step telemetry. Each step is persisted as JSONL, and each run writes a manifest plus full session artifacts under \texttt{data/experiments/<session\_id>/}.
+
+\subsection{Scenario Design}
+Each scenario contains (i) an initial objective, (ii) a perturbation schedule with explicit step indices, and (iii) a deterministic validator over output artifacts. Perturbations are implemented as requirement changes visible to the agent and, where needed, synchronized sandbox mutations (e.g., switching active policy files). This design ensures identical task dynamics across models and isolates adaptation behavior from environment randomness.
+
+\subsection{Interaction Protocol}
+At step \(t\), the agent receives accumulated dialogue history plus latest tool outputs. The agent emits either:
+\begin{equation*}
+a_t \in \{\texttt{tool\_use}(\text{name}, \text{args}),\ \texttt{llm\_reply}(\text{text})\}.
+\end{equation*}
+Tool outputs are appended back into context. Consequently, prompt length grows with trajectory length. This is intentional: the benchmark should expose context-pressure effects that short static benchmarks hide.
+
+\subsection{Outcome Definition and Stopping}
+Primary completion is validator pass. Auxiliary stop signals are optional done-claim detection and optional AI-verifier verdict at confidence threshold. For reporting, validator pass is the authoritative outcome label; done claims and verifier decisions are treated as behavioral covariates (e.g., false completion claims).
+
+\subsection{Metrics}
+We report both outcome and dynamics metrics.
+
+\paragraph{Task Outcome.}
+Validator success (\(0/1\)), step-to-success (or timeout), and run-level token cost.
+
+\paragraph{Semantic Collapse Ratio (SCR).}
+At probe time, the system samples \(N\) branched next-step responses and embeds each branch \(v_i\). SCR is mean pairwise cosine distance:
+\[
+\mathrm{SCR} = \frac{1}{N(N-1)}\sum_{i\neq j} d_{\cos}(v_i,v_j).
+\]
+Larger SCR indicates higher next-step semantic divergence. If fewer than two valid probe branches exist, SCR is recorded as \texttt{null}.
+
+\paragraph{Entropy Proxy and Coverage.}
+When token logprobs are available, we compute chosen-token surprisal:
+\[
+H = -\frac{1}{T}\sum_{t=1}^{T}\log p(x_t).
+\]
+Because many providers do not expose reliable logprobs, missing entropy is represented as \texttt{null} (never imputed). We therefore report \emph{entropy coverage}, the proportion of eligible steps with non-null entropy.
+
+\paragraph{Information Gain Efficiency (IGE).}
+For steps with valid pre/post entropy around a tool interaction:
+\[
+\mathrm{IGE} = \frac{H_{\text{pre}} - H_{\text{post}}}{\text{TokenCost}}.
+\]
+IGE is undefined when entropy is unavailable.
+
+\paragraph{Additional Dynamics Signals.}
+We log RDI (semantic drift from goal text), compression ratio of language replies (loop/stagnation proxy), code-branching factor on Python writes, panic counter, and intervention triggers.
+
+\subsection{Probe Regimes}
+We evaluate three probe regimes: off, shock-only, and periodic. Shock-only probes run at perturbation steps; periodic probes run every \(k\) steps when no perturbation is active at that step. Probe-token usage is tracked separately (\texttt{probe\_total\_tokens}) so cost analyses can distinguish task tokens from probe overhead.
+
+\subsection{Context and Cost Accounting}
+For each step we record \texttt{prompt\_tokens}, \texttt{completion\_tokens}, and \texttt{total\_tokens} when supplied by the provider. Because history is resent each step, prompt-token growth is expected in long trajectories. We therefore report both per-step token trajectories and aggregate run-level totals, and analyze robustness as a function of context growth rather than only final cost.
+
+\subsection{Statistical Reporting Plan}
+For each condition, we report success rate, median steps, and token-cost distributions. For perturbation robustness, we report SCR summaries at shock steps and recovery latency (steps from perturbation to first validator pass, when achieved). For final tables, uncertainty should be reported using bootstrap confidence intervals over repeated runs per condition. Model comparisons should use matched scenario sets and seed schedules.
+
+\subsection{Reproducibility}
+Reproducibility is enforced by deterministic scenario assets, deterministic validators, fixed harness configuration, and full run manifests. Because every step and artifact is serialized, all aggregate results can be regenerated directly from session directories without manual relabeling.

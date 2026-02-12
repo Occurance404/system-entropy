@@ -29,6 +29,19 @@ def _resolve_env(key: str, dotenv: Dict[str, str]) -> Optional[str]:
     return os.getenv(key) or dotenv.get(key)
 
 
+def _classify_error(error: Exception) -> str:
+    msg = str(error).lower()
+    if "api key" in msg or "unauthorized" in msg or "401" in msg:
+        return "auth"
+    if "connection" in msg or "timeout" in msg or "name resolution" in msg or "dns" in msg:
+        return "infrastructure"
+    if "does not support tools" in msg or "tool_choice" in msg or "logprobs" in msg:
+        return "capability_mismatch"
+    if "missing api key env var" in msg:
+        return "configuration"
+    return "unknown"
+
+
 @dataclass(frozen=True)
 class ModelSpec:
     name: str
@@ -67,6 +80,7 @@ def _run_one(
     probe_branch_count: int,
     enable_intervention: bool,
     validation_interval: int,
+    stop_on_agent_done: bool,
 ) -> Dict[str, Any]:
     api_key = _resolve_env(model.api_key_env, dotenv)
     if not api_key:
@@ -98,77 +112,92 @@ def _run_one(
         enable_validation=True,
         validation_interval=validation_interval,
         stop_on_success=True,
+        stop_on_agent_done=stop_on_agent_done,
         enable_branching_probes=enable_branching_probes,
         probe_interval=probe_interval,
         probe_branch_count=probe_branch_count,
     )
 
-    total_tokens = 0
-    probe_total_tokens = 0
-    last_event_type = None
-    for _ in range(max_steps):
-        step_result = orchestrator.step()
-        last_event_type = step_result.get("event_type")
-
-        if isinstance(step_result.get("total_tokens"), int):
-            total_tokens += step_result["total_tokens"]
-
-        if step_result.get("type") == "perturbation_triggered":
-            probe_metrics = step_result.get("probe_metrics") or {}
-            if isinstance(probe_metrics, dict) and isinstance(probe_metrics.get("probe_total_tokens"), int):
-                probe_total_tokens += probe_metrics["probe_total_tokens"]
-
-        if step_result.get("task_complete") or last_event_type == "task_complete":
-            break
-        if last_event_type == "intervention" and enable_intervention:
-            break
-
-    validation = validate_scenario(scenario_id, orchestrator.sandbox_path)
-    validation_passed = validation.passed if validation is not None else None
-    validation_score = validation.score if validation is not None else None
-
-    # Best-effort drift summary (written alongside the manifest for reproducibility).
     try:
-        summary_path = os.path.join(orchestrator.run_dir, "summary.json")
-        with open(summary_path, "w", encoding="utf-8") as f:
-            json.dump(orchestrator.compute_drift_summary(), f, indent=2, sort_keys=True)
-    except Exception:
-        pass
+        total_tokens = 0
+        probe_total_tokens = 0
+        last_event_type = None
+        agent_done_claim_count = 0
+        first_agent_done_claim_step = None
+        for _ in range(max_steps):
+            step_result = orchestrator.step()
+            last_event_type = step_result.get("event_type")
 
-    # Always stop the sandbox container if available (prevents runaway Docker usage in sweeps).
-    try:
-        if getattr(orchestrator, "connector", None):
-            orchestrator.connector.stop()
-    except Exception:
-        pass
+            if isinstance(step_result.get("total_tokens"), int):
+                total_tokens += step_result["total_tokens"]
 
-    return {
-        "timestamp": datetime.now().isoformat(),
-        "run_id": run_id,
-        "model_name": model.name,
-        "model": model.model,
-        "scenario_id": scenario_id,
-        "rep_index": int(rep_index),
-        "max_steps": max_steps,
-        "steps_executed": orchestrator.step_count,
-        "last_event_type": last_event_type,
-        "validation_passed": validation_passed,
-        "validation_score": validation_score,
-        "log_file": metrics_monitor.log_file,
-        "run_dir": orchestrator.run_dir,
-        "total_tokens": total_tokens,
-        "probe_total_tokens": probe_total_tokens,
-        "total_tokens_including_probes": total_tokens + probe_total_tokens,
-        "probe_interval": probe_interval,
-        "probe_branch_count": probe_branch_count,
-        "enable_branching_probes": enable_branching_probes,
-        "enable_intervention": enable_intervention,
-        "metric_embedding_backend": metric_backend,
-        "metric_embedding_model": metric_model,
-        "metric_embedding_device": metric_device,
-        "metric_local_files_only": metric_local_files_only,
-        "metric_hash_dim": metric_hash_dim,
-    }
+            if step_result.get("type") == "perturbation_triggered":
+                probe_metrics = step_result.get("probe_metrics") or {}
+                if isinstance(probe_metrics, dict) and isinstance(probe_metrics.get("probe_total_tokens"), int):
+                    probe_total_tokens += probe_metrics["probe_total_tokens"]
+
+            if bool(step_result.get("agent_done_claimed")):
+                agent_done_claim_count += 1
+                if first_agent_done_claim_step is None:
+                    try:
+                        first_agent_done_claim_step = int(step_result.get("step_index"))
+                    except Exception:
+                        first_agent_done_claim_step = orchestrator.step_count
+
+            if step_result.get("task_complete") or last_event_type == "task_complete":
+                break
+            if last_event_type == "intervention" and enable_intervention:
+                break
+
+        validation = validate_scenario(scenario_id, orchestrator.sandbox_path)
+        validation_passed = validation.passed if validation is not None else None
+        validation_score = validation.score if validation is not None else None
+
+        # Best-effort drift summary (written alongside the manifest for reproducibility).
+        try:
+            summary_path = os.path.join(orchestrator.run_dir, "summary.json")
+            with open(summary_path, "w", encoding="utf-8") as f:
+                json.dump(orchestrator.compute_drift_summary(), f, indent=2, sort_keys=True)
+        except Exception:
+            pass
+
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "run_id": run_id,
+            "model_name": model.name,
+            "model": model.model,
+            "scenario_id": scenario_id,
+            "rep_index": int(rep_index),
+            "max_steps": max_steps,
+            "steps_executed": orchestrator.step_count,
+            "last_event_type": last_event_type,
+            "validation_passed": validation_passed,
+            "validation_score": validation_score,
+            "log_file": metrics_monitor.log_file,
+            "run_dir": orchestrator.run_dir,
+            "total_tokens": total_tokens,
+            "probe_total_tokens": probe_total_tokens,
+            "total_tokens_including_probes": total_tokens + probe_total_tokens,
+            "agent_done_claim_count": agent_done_claim_count,
+            "first_agent_done_claim_step": first_agent_done_claim_step,
+            "probe_interval": probe_interval,
+            "probe_branch_count": probe_branch_count,
+            "enable_branching_probes": enable_branching_probes,
+            "enable_intervention": enable_intervention,
+            "stop_on_agent_done": bool(stop_on_agent_done),
+            "metric_embedding_backend": metric_backend,
+            "metric_embedding_model": metric_model,
+            "metric_embedding_device": metric_device,
+            "metric_local_files_only": metric_local_files_only,
+            "metric_hash_dim": metric_hash_dim,
+        }
+    finally:
+        # Always stop the sandbox connector, even on mid-run exceptions.
+        try:
+            if getattr(orchestrator, "connector", None):
+                orchestrator.connector.stop()
+        except Exception:
+            pass
 
 
 def main() -> None:
@@ -187,6 +216,11 @@ def main() -> None:
     parser.add_argument("--max-steps", type=int, default=60, help="Fallback max steps if suite omits it.")
     parser.add_argument("--enable-intervention", action="store_true", help="Enable entropy-based intervention (if entropy is available).")
     parser.add_argument("--validation-interval", type=int, default=1, help="Validate every N steps.")
+    parser.add_argument(
+        "--stop-on-agent-done",
+        action="store_true",
+        help="Also stop early if the agent explicitly signals completion in an LLM reply.",
+    )
     parser.add_argument("--out", default=None, help="Output CSV path (default: data/results/benchmark_<ts>.csv).")
     args = parser.parse_args()
 
@@ -240,6 +274,7 @@ def main() -> None:
                         probe_branch_count=args.probe_branches,
                         enable_intervention=bool(args.enable_intervention),
                         validation_interval=max(1, int(args.validation_interval)),
+                        stop_on_agent_done=bool(args.stop_on_agent_done),
                     )
                     rows.append(row)
                 except KeyboardInterrupt:
@@ -253,6 +288,7 @@ def main() -> None:
                             "model": model.model,
                             "scenario_id": scenario_id,
                             "error": str(e),
+                            "error_class": _classify_error(e),
                         }
                     )
 

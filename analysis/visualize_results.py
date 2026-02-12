@@ -46,6 +46,25 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
     if 'event_type' not in df.columns:
         df['event_type'] = 'unknown_action'
 
+    def _to_bool(val):
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, (int, float)):
+            return bool(val)
+        if isinstance(val, str):
+            return val.strip().lower() in ("1", "true", "yes", "on")
+        return False
+
+    if 'agent_done_claimed' not in df.columns:
+        df['agent_done_claimed'] = False
+    done_claim_mask = df['agent_done_claimed'].apply(_to_bool)
+    claim_steps = df[done_claim_mask]['step_index'].dropna().tolist()
+
+    if 'task_complete' not in df.columns:
+        df['task_complete'] = False
+    complete_mask = df['task_complete'].apply(_to_bool)
+    complete_steps = df[complete_mask]['step_index'].dropna().tolist()
+
     if 'panic_counter' not in df.columns:
         if 'orchestrator_state' in df.columns:
             df['panic_counter'] = df['orchestrator_state'].apply(
@@ -100,16 +119,25 @@ def plot_metrics(df, output_path="data/results/experiment_summary.png"):
 
     scenario_id = df['scenario_id'].dropna().iloc[0] if 'scenario_id' in df.columns and not df['scenario_id'].dropna().empty else 'unknown'
     coverage_label = f"Entropy coverage (non-probe): {entropy_coverage:.0%}"
-    fig.suptitle(f"Run Summary - {scenario_id} | {coverage_label}", fontsize=12)
+    done_claim_label = f"AI done-claims: {len(claim_steps)}"
+    complete_label = f"completed flags: {len(complete_steps)}"
+    fig.suptitle(f"Run Summary - {scenario_id} | {coverage_label} | {done_claim_label} | {complete_label}", fontsize=12)
 
     def _shade_shocks(ax):
         for step in shock_steps:
             ax.axvline(step, color='red', alpha=0.15, linestyle='--', linewidth=1)
 
+    def _mark_completion_signals(ax):
+        for step in claim_steps:
+            ax.axvline(step, color='green', alpha=0.25, linestyle=':', linewidth=1)
+        for step in complete_steps:
+            ax.axvline(step, color='black', alpha=0.2, linestyle='-.', linewidth=1)
+
     def _set_axis_style(ax):
         ax.grid(True, alpha=0.3)
         ax.tick_params(axis='both', labelsize=9)
         _shade_shocks(ax)
+        _mark_completion_signals(ax)
 
     panel_idx = 0
 

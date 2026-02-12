@@ -12,7 +12,12 @@ from src.monitor.terminal_bench_monitor import get_monitor
 from src.agent.mock_agent import ScriptedAgent
 from src.shared.constants import LOGS_DIR
 
-def run_simulation(scenario_id: str = "drug_filter_shock", max_steps: int = 10, cheap: bool = False):
+def run_simulation(
+    scenario_id: str = "drug_filter_shock",
+    max_steps: int = 10,
+    cheap: bool = False,
+    stop_on_agent_done: bool = False,
+):
     print(f"--- Starting Simulation: {scenario_id} ---")
     
     # 1. Initialize Components
@@ -30,6 +35,7 @@ def run_simulation(scenario_id: str = "drug_filter_shock", max_steps: int = 10, 
         metrics_monitor=tb_monitor,
         enable_validation=cheap,
         stop_on_success=cheap,
+        stop_on_agent_done=stop_on_agent_done,
         enable_branching_probes=not cheap,
     )
     
@@ -83,6 +89,12 @@ if __name__ == "__main__":
     parser.add_argument("--scenario", type=str, default="drug_filter_shock", help="Scenario ID")
     parser.add_argument("--steps", type=int, default=10, help="Max steps")
     parser.add_argument("--cheap", action="store_true", help="Disable expensive probes and stop on validator success.")
+    parser.add_argument("--stop_on_agent_done", action="store_true", help="Stop when the agent explicitly signals completion.")
     args = parser.parse_args()
     
-    run_simulation(scenario_id=args.scenario, max_steps=args.steps, cheap=args.cheap)
+    run_simulation(
+        scenario_id=args.scenario,
+        max_steps=args.steps,
+        cheap=args.cheap,
+        stop_on_agent_done=args.stop_on_agent_done,
+    )

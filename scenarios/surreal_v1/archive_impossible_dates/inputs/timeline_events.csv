@@ -1,0 +1,6 @@
+event_id,event_name,calendar,base_day
+E1,Founding Treaty,SOLAR,10
+E2,Lunar Charter,LUNAR,9
+E3,Civic Reform,CIVIC,15
+E4,Harbor Accord,SOLAR,13
+E5,Night Assembly,LUNAR,12

@@ -3,13 +3,20 @@ import subprocess
 import time
 import json
 import glob
-from datetime import datetime
+import sys
 
-def run_scale_experiment(num_runs=5, output_csv="data/results/scale_experiment_results_v2.csv"):
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from src.shared.constants import LOGS_ROOT, RESULTS_DIR
+
+
+def run_scale_experiment(num_runs=5, output_csv=None):
+    if output_csv is None:
+        output_csv = os.path.join(RESULTS_DIR, "scale_experiment_results_v2.csv")
     print(f"--- Starting Scale Experiment (Slow Mode): {num_runs} runs ---")
     
     # 1. Setup Results File
-    os.makedirs("data/results", exist_ok=True)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
     with open(output_csv, "w") as f:
         f.write("run_id,step,entropy,scr,is_shocked\n")
         
@@ -32,7 +39,7 @@ def run_scale_experiment(num_runs=5, output_csv="data/results/scale_experiment_r
             
         # 3. Harvest Data from the Monitor Log
         # The runner writes to logs/rescue/sim_baseline_file_organizer_shock_YYYYMMDD_HHMMSS.jsonl
-        list_of_files = glob.glob('logs/rescue/*.jsonl')
+        list_of_files = glob.glob(os.path.join(LOGS_ROOT, "rescue", "*.jsonl"))
         if not list_of_files:
             print("Warning: No monitor logs found.")
             continue

@@ -1,7 +1,5 @@
 import os
 import uuid
-import json
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from src.connectors.local_connect import LocalSandboxConnector
@@ -19,7 +17,18 @@ from src.tools.registry import ToolRegistry
 from .history import action_signature, format_tool_args_for_history
 from .panic import update_entropy_panic, update_loop_panic
 from .probes import run_branching_probe
+from .step_state import (
+    build_default_step_metrics,
+    build_task_complete_payload,
+    check_perturbation_trigger,
+    compose_validation_details_for_log,
+)
 from .tools import execute_tool_and_measure
+from .verifier import (
+    agent_signaled_completion,
+    normalize_ai_verifier_result,
+    run_ai_verifier,
+)
 
 
 class Orchestrator:
@@ -44,6 +53,10 @@ class Orchestrator:
         enable_validation: bool = False,
         validation_interval: int = 1,
         stop_on_success: bool = False,
+        stop_on_agent_done: bool = False,
+        enable_ai_verifier: bool = False,
+        ai_verifier_interval: int = 0,
+        ai_verifier_confidence_threshold: float = 0.8,
         enable_branching_probes: bool = True,
         probe_branch_count: int = 5,
     ):
@@ -61,7 +74,12 @@ class Orchestrator:
         sandbox_dirname = f"sandbox_{scenario_id}"
         if sandbox_per_run and backend in ("local", "host"):
             sandbox_dirname = f"sandbox_{scenario_id}_{self.run_id}"
-        self.sandbox_path = os.path.join(project_root, "data", sandbox_dirname)
+        sandbox_root = os.getenv("EXPERIMENT_SANDBOX_ROOT")
+        if sandbox_root:
+            sandbox_root = os.path.abspath(sandbox_root)
+        else:
+            sandbox_root = os.path.join(project_root, "data")
+        self.sandbox_path = os.path.join(sandbox_root, sandbox_dirname)
 
         if scenario_id in SCENARIO_SETUP_MAP:
             print(f"Orchestrator: Running environment setup for {scenario_id}...")
@@ -76,6 +94,31 @@ class Orchestrator:
         self.enable_validation = enable_validation
         self.validation_interval = max(1, int(validation_interval))
         self.stop_on_success = stop_on_success
+        self.stop_on_agent_done = bool(stop_on_agent_done)
+        self.enable_ai_verifier = bool(
+            enable_ai_verifier
+            or (os.getenv("AI_VERIFIER") or "off").strip().lower() in ("1", "true", "yes", "on")
+        )
+        env_ai_interval = os.getenv("AI_VERIFIER_INTERVAL")
+        if env_ai_interval is not None:
+            try:
+                ai_verifier_interval = int(env_ai_interval)
+            except Exception:
+                ai_verifier_interval = ai_verifier_interval
+        self.ai_verifier_interval = max(0, int(ai_verifier_interval))
+        env_ai_conf = os.getenv("AI_VERIFIER_CONFIDENCE")
+        if env_ai_conf is not None:
+            try:
+                ai_verifier_confidence_threshold = float(env_ai_conf)
+            except Exception:
+                ai_verifier_confidence_threshold = ai_verifier_confidence_threshold
+        self.ai_verifier_confidence_threshold = min(1.0, max(0.0, float(ai_verifier_confidence_threshold)))
+        self.ai_verifier_feedback = (os.getenv("AI_VERIFIER_FEEDBACK") or "on").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
         self.validation_feedback = (os.getenv("VALIDATION_FEEDBACK") or "off").strip().lower() in (
             "1",
             "true",
@@ -125,7 +168,11 @@ class Orchestrator:
                     from src.connectors.tb_connect import TerminalBenchConnector  # lazy import (docker optional)
 
                     print("Initializing TerminalBench Sandbox (Docker)...")
-                    self.connector = TerminalBenchConnector(scenario_id)
+                    self.connector = TerminalBenchConnector(
+                        scenario_id,
+                        host_data_path=self.sandbox_path,
+                        run_id=self.run_id,
+                    )
                     self.connector.start()
                 except Exception as e:
                     if backend in ("docker", "terminalbench"):
@@ -166,6 +213,10 @@ class Orchestrator:
                         "enable_validation": self.enable_validation,
                         "validation_interval": self.validation_interval,
                         "stop_on_success": self.stop_on_success,
+                        "stop_on_agent_done": self.stop_on_agent_done,
+                        "enable_ai_verifier": self.enable_ai_verifier,
+                        "ai_verifier_interval": self.ai_verifier_interval,
+                        "ai_verifier_confidence_threshold": self.ai_verifier_confidence_threshold,
                         "enable_branching_probes": self.enable_branching_probes,
                         "probe_branch_count": self.probe_branch_count,
                         "agent_base_url": getattr(self.agent, "base_url", None),
@@ -214,46 +265,46 @@ class Orchestrator:
             "post_recovery_drift_mean": post_recovery_mean,
         }
 
+    def _agent_signaled_completion(self, content: Any) -> bool:
+        return agent_signaled_completion(content)
+
+    def _agent_supports_ai_verifier(self) -> bool:
+        return callable(getattr(self.agent, "assess_completion", None))
+
+    def _normalize_ai_verifier_result(self, raw: Any) -> Dict[str, Any]:
+        return normalize_ai_verifier_result(raw)
+
+    def _run_ai_verifier(self, trigger: str) -> Dict[str, Any]:
+        return run_ai_verifier(
+            assess_func=getattr(self.agent, "assess_completion", None),
+            history=self.history,
+            scenario_id=self.scenario_id,
+            ground_truth_goal=self.ground_truth_text,
+            sandbox_path=self.sandbox_path,
+            trigger=trigger,
+        )
+
     def step(self) -> Dict:
         """
         Advances the simulation by one step.
         """
         if self.task_complete:
-            return {
-                "run_id": self.run_id,
-                "scenario_id": self.scenario_id,
-                "step_index": self.step_count,
-                "model": getattr(self.agent, "model_name", "unknown"),
-                "event_type": "task_complete",
-                "task_complete": True,
-                "timestamp": datetime.now().isoformat(),
-            }
+            return build_task_complete_payload(
+                run_id=self.run_id,
+                scenario_id=self.scenario_id,
+                step_index=self.step_count,
+                model_name=getattr(self.agent, "model_name", "unknown"),
+            )
 
         self.step_count += 1
 
-        step_metrics = {
-            "run_id": self.run_id,
-            "scenario_id": self.scenario_id,
-            "step_index": self.step_count,
-            "model": getattr(self.agent, "model_name", "unknown"),
-            "current_entropy": None,
-            "ige": None,
-            "scr": None,
-            "cbf": None,
-            "rdi": None,
-            "compression_ratio": None,
-            "event_type": None,
-            "panic_counter": self.panic_counter,
-            "tool": None,
-            "task_complete": None,
-            "validation_passed": None,
-            "validation_score": None,
-            "validation_details": None,
-            "prompt_tokens": None,
-            "completion_tokens": None,
-            "total_tokens": None,
-            "timestamp": datetime.now().isoformat(),
-        }
+        step_metrics = build_default_step_metrics(
+            run_id=self.run_id,
+            scenario_id=self.scenario_id,
+            step_index=self.step_count,
+            model_name=getattr(self.agent, "model_name", "unknown"),
+            panic_counter=self.panic_counter,
+        )
 
         # 1. Check for Periodic SCR Probe (Silent)
         if self.enable_branching_probes and self.probe_interval > 0 and self.step_count % self.probe_interval == 0:
@@ -418,6 +469,7 @@ class Orchestrator:
         # Handle Agent's Intent
         tool_result = None
         tool_name = None
+        agent_done_claimed = False
         if agent_action_intent["type"] == "tool_use":
             tool_name = agent_action_intent["tool"]
             tool_args = agent_action_intent["content"]
@@ -449,6 +501,9 @@ class Orchestrator:
             step_metrics["event_type"] = "llm_reply"
             step_metrics["compression_ratio"] = self.metric_service.calculate_compression_ratio(agent_action_intent["content"])
             self.history.append({"role": "assistant", "content": agent_action_intent["content"]})
+            if self._agent_signaled_completion(agent_action_intent["content"]):
+                agent_done_claimed = True
+                step_metrics["agent_done_claimed"] = True
         else:
             step_metrics["event_type"] = "unknown_action"
 
@@ -468,6 +523,39 @@ class Orchestrator:
                     step_metrics["task_complete"] = True
                     self.task_complete = True
 
+        ai_verifier_trigger = None
+        if self.enable_ai_verifier:
+            if agent_done_claimed:
+                ai_verifier_trigger = "done_claim"
+            elif self.ai_verifier_interval > 0 and self.step_count % self.ai_verifier_interval == 0:
+                ai_verifier_trigger = "periodic"
+
+        if ai_verifier_trigger and not self.task_complete:
+            if self._agent_supports_ai_verifier():
+                verdict = self._run_ai_verifier(trigger=ai_verifier_trigger)
+                step_metrics["ai_verifier_verdict"] = verdict["verdict"]
+                step_metrics["ai_verifier_confidence"] = verdict["confidence"]
+                step_metrics["ai_verifier_reason"] = verdict["reason"]
+
+                if verdict["verdict"] == "done" and verdict["confidence"] >= self.ai_verifier_confidence_threshold:
+                    step_metrics["task_complete"] = True
+                    self.task_complete = True
+                elif (
+                    agent_done_claimed
+                    and self.ai_verifier_feedback
+                    and verdict["verdict"] in ("not_done", "uncertain")
+                ):
+                    reason = verdict["reason"][:400]
+                    self.history.append({"role": "user", "content": f"VERIFIER: task not complete yet. {reason}"})
+            elif agent_done_claimed:
+                # Preserve legacy stop behavior if verifier is enabled but unsupported by the active agent.
+                step_metrics["task_complete"] = True
+                self.task_complete = True
+
+        if agent_done_claimed and self.stop_on_agent_done and not self.task_complete and not self.enable_ai_verifier:
+            step_metrics["task_complete"] = True
+            self.task_complete = True
+
         # Logging
         if self.metrics_monitor:
             self.metrics_monitor.log_step(
@@ -486,9 +574,12 @@ class Orchestrator:
                 tool=step_metrics["tool"],
                 compression_ratio=step_metrics["compression_ratio"],
                 task_complete=step_metrics["task_complete"],
+                agent_done_claimed=step_metrics["agent_done_claimed"],
                 validation_passed=step_metrics["validation_passed"],
                 validation_score=step_metrics["validation_score"],
-                validation_details=step_metrics["validation_details"],
+                validation_details=self._compose_validation_details_for_log(step_metrics),
+                ai_verifier_verdict=step_metrics["ai_verifier_verdict"],
+                ai_verifier_confidence=step_metrics["ai_verifier_confidence"],
                 prompt_tokens=step_metrics["prompt_tokens"],
                 completion_tokens=step_metrics["completion_tokens"],
                 total_tokens=step_metrics["total_tokens"],
@@ -501,11 +592,11 @@ class Orchestrator:
             return {**step_metrics, **{"type": "llm_reply", "content": agent_action_intent["content"]}}
         return {**step_metrics, **{"type": "unknown_action"}}
 
+    def _compose_validation_details_for_log(self, step_metrics: Dict[str, Any]) -> Optional[str]:
+        return compose_validation_details_for_log(step_metrics)
+
     def _check_perturbation_triggers(self) -> Optional[str]:
-        for p in self.scenario.get("perturbations", []):
-            if p["step"] == self.step_count:
-                return p["instruction"]
-        return None
+        return check_perturbation_trigger(self.scenario, self.step_count)
 
     def intervene(self):
         print(f"Intervention Triggered at step {self.step_count} due to persistent panic!")

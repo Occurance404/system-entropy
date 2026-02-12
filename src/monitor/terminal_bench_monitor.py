@@ -46,9 +46,12 @@ class TerminalBenchMonitor:
                  tool: Optional[str] = None,
                  compression_ratio: Optional[float] = None,
                  task_complete: Optional[bool] = None,
+                 agent_done_claimed: Optional[bool] = None,
                  validation_passed: Optional[bool] = None,
                  validation_score: Optional[float] = None,
                  validation_details: Optional[str] = None,
+                 ai_verifier_verdict: Optional[str] = None,
+                 ai_verifier_confidence: Optional[float] = None,
                  prompt_tokens: Optional[int] = None,
                  completion_tokens: Optional[int] = None,
                  total_tokens: Optional[int] = None,
@@ -93,6 +96,10 @@ class TerminalBenchMonitor:
                 math.isnan(validation_score) or math.isinf(validation_score)
             ):
                 validation_score = None
+            if isinstance(ai_verifier_confidence, float) and (
+                math.isnan(ai_verifier_confidence) or math.isinf(ai_verifier_confidence)
+            ):
+                ai_verifier_confidence = None
 
             # Construct Log Entry matching LOG_SCHEMA
             entry = {
@@ -111,9 +118,12 @@ class TerminalBenchMonitor:
                 "tool": tool,
                 "compression_ratio": compression_ratio,
                 "task_complete": task_complete,
+                "agent_done_claimed": bool(agent_done_claimed) if agent_done_claimed is not None else None,
                 "validation_passed": validation_passed,
                 "validation_score": validation_score,
                 "validation_details": (validation_details[:500] if isinstance(validation_details, str) else None),
+                "ai_verifier_verdict": ai_verifier_verdict,
+                "ai_verifier_confidence": ai_verifier_confidence,
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
                 "total_tokens": total_tokens,

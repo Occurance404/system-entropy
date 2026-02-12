@@ -1,0 +1,1234 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{titlesec}
+\usepackage{tocloft}
+
+% Margins
+\geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=25mm,
+ top=25mm,
+}
+
+% Code listing style
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% Title Formatting
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+\begin{document}
+
+% --- TITLE PAGE ---
+
+\begin{titlepage}
+
+    \begin{center}
+
+        \vspace*{1cm}
+
+        
+
+        \Huge
+
+        \textbf{BEYOND TOKEN ENTROPY: DETECTING COGNITIVE COLLAPSE IN NON-STATIONARY LLM AGENTS}
+
+        
+
+        \vspace{1.5cm}
+
+        
+
+        \Large
+
+        \textit{A Thesis Submitted in Partial Fulfillment of the Requirements\ for the Degree of}
+
+        
+
+                \vspace{0.5cm}
+
+        
+
+                \textbf{Master of Technology (M.Tech)}\\
+
+        
+
+                \textit{in}\\
+
+        
+
+                \textbf{Artificial Intelligence and Machine Learning}
+
+        
+
+                
+
+        
+
+                \vspace{1.5cm}
+
+        
+
+                
+
+        
+
+                \textbf{By}
+
+        
+
+                
+
+        
+
+                \vspace{0.5cm}
+
+        
+
+                \textbf{Birat Chapagain}
+
+        
+
+                
+
+        
+
+                \vspace{1.5cm}
+
+        
+
+                
+
+        
+
+                \textbf{Supervisor}
+
+        
+
+                
+
+        
+
+                \vspace{0.5cm}
+
+        
+
+                \textbf{Dr. N. Satya Krishna}
+
+        
+
+                
+
+        
+
+                \vfill
+
+        
+
+                
+
+        
+
+                \Large
+
+        
+
+                Department of Computer Science and Engineering\\
+
+        
+
+                SRM University-AP\\
+
+        
+
+                December 2025
+
+        
+
+                
+
+        
+
+            \end{center}
+
+        
+
+        \end{titlepage}
+
+        
+
+        
+
+        
+
+        % --- CERTIFICATE ---
+
+        
+
+        \chapter*{Certificate}
+
+        
+
+        This is to certify that the thesis titled \textbf{``Beyond Token Entropy: Detecting Cognitive Collapse in Non-Stationary LLM Agents''} submitted by \textbf{Birat Chapagain} to SRM University-AP is a record of bona fide research work carried out by him under my supervision. In my opinion, the thesis has reached the standards of fulfilling the requirements of the regulations relating to the degree.
+
+        
+
+        
+
+        
+
+        \vspace{3cm}
+
+        
+
+        \noindent
+
+        
+
+        \textbf{Dr. N. Satya Krishna}\\
+
+        
+
+        Department of Computer Science and Engineering\\
+
+        
+
+        SRM University-AP
+
+% --- ABSTRACT ---
+\chapter*{Abstract}
+As Large Language Model (LLM) agents are increasingly deployed in autonomous software engineering and data analysis roles, their reliability in dynamic, non-stationary environments remains an open challenge. Current evaluation benchmarks focus primarily on static task correctness, failing to capture the "silent failures" where an agent loses reasoning coherence without exhibiting surface-level uncertainty.
+
+This thesis introduces the \textbf{Entropic Stress-Test Framework}, a novel system for evaluating agent stability under shifting task constraints. We propose a new metric, the \textbf{Semantic Collapse Ratio (SCR)}, which quantifies the divergence of an agent's latent intentions by analyzing parallel reasoning paths in embedding space.
+
+Experimental results using the DeepSeek-v3.2 model across data processing and coding scenarios demonstrate that standard metrics like token entropy fail to predict collapse ($<0.01$ during failure). In contrast, SCR consistently spikes ($>0.20$) at the exact moment of cognitive fracture, successfully predicting "text stagnation" loops where the agent ceases meaningful tool use. These findings suggest that semantic monitoring is a critical requirement for building safe, reliable autonomous systems.
+
+\vspace{1cm}
+\noindent \textbf{Keywords:} LLM Agents, AI Safety, Semantic Collapse, Uncertainty Quantification, Reliability Engineering.
+
+% --- TABLE OF CONTENTS ---
+\tableofcontents
+\listoffigures
+\listoftables
+
+% --- CHAPTER 1 ---
+\chapter{Introduction}
+
+\section{When AI Agents Fail Without Warning}
+Benchmarks like SWE-bench and HumanEval create a sense that LLMs are steady software helpers \cite{Jimenez2024SWEBenchPlus, OpenAI2024HumanEval}. That confidence cracks as soon as the task changes mid-stream. In my runs, once the plan was formed, a new instruction did not trigger hesitation; the agent just kept executing the old plan—politely acknowledging the update while doing the wrong thing. The output stayed fluent and tidy, but it marched in the wrong direction.
+
+This ``silent failure'' repeats whenever a plan must be revised \cite{Chen2024ToolsFail, Chen2023ToolEmu, Jiang2025DarkPatterns}. Token-level signals stay calm, so common monitors do not flag the drift until the agent is already looping or corrupting state.
+
+\section{Why Existing Confidence Metrics Fall Short}
+For years, token-level entropy has been treated as a useful proxy for model confidence. The logic is straightforward: if a model is unsure, its probability distribution over the next token spreads out; if it is confident, the distribution concentrates.
+
+This intuition breaks down in RLHF-trained models \cite{Chen2025Overconfidence, Perez2024Mislead, Wang2024StyleOutweighs}.
+
+Human preference rewards confident, decisive-sounding responses. During RLHF fine-tuning, models learn to suppress hesitation, even in situations where internal uncertainty is high. As a result, the entropy of the output distribution becomes decoupled from the model’s actual cognitive state. In practice:
+\begin{itemize}
+    \item a model may be deeply confused internally
+    \item yet still emit low-entropy, high-certainty text
+    \item because that is what it has been trained to do \cite{Tian2023Calibration}
+\end{itemize}
+
+This distortion means that monitoring entropy alone is misleading. In my experiments, entropy often remained at or near zero even when the agent had completely lost the thread of the task. The model will not warn you when it is confused; RLHF has taught it to sound composed no matter what.
+
+\section{A Different Lens: Confusion Reveals Itself Through Divergent Plans}
+While entropy fails to reflect confusion, something else reliably does: the diversity of the model’s internal possibilities.
+
+The intuition came from watching humans: a confident engineer states one clear next step; a confused one rattles off competing options. LLMs act the same way internally, but the final message hides it. If we ask for several possible next actions from the same state (turning up temperature a bit), we can see whether those branches agree or diverge \cite{Zhou2024Consistency}.
+
+This led to the design of Branching Probes, a simple but revealing mechanism:
+\begin{enumerate}
+    \item Freeze the agent’s context at a given step
+    \item Generate five parallel next-step responses
+    \item Embed each response into vector space
+    \item Measure how far apart they are
+\end{enumerate}
+
+The resulting metric—the Semantic Collapse Ratio (SCR)—quantifies how fractured the agent’s internal reasoning has become. High SCR consistently appears at the exact moment the agent loses coherence.
+
+\section{What This Framework Tries to Solve}
+Because this collapse is silent in the traditional sense, we need a more direct way to measure the stability of an agent’s internal reasoning. The Entropic Stress-Test Framework was developed precisely for this purpose. Instead of relying on the model’s self-reported confidence, the framework evaluates models under dynamic, shifting task constraints—much closer to real engineering conditions.
+
+The system consists of four tightly-coordinated components:
+\begin{itemize}
+    \item \textbf{The Orchestrator} — manages execution, introduces requirement changes, runs branching probes
+    \item \textbf{The Agent Wrapper} — exposes a uniform interface for any LLM and captures tool-use actions
+    \item \textbf{The Sandbox} — a Docker-based environment where actions have persistent consequences
+    \item \textbf{The Metric Service} — computes SCR, token entropy, information gain, debt indices, and loop signatures
+\end{itemize}
+
+Together, these components provide a controlled but realistic arena for observing how an agent behaves when its assumptions are challenged.
+
+\section{Stress-Testing in Three Practical Domains}
+The scenarios mimic everyday tasks a developer or data engineer might do. Each has a stable “golden path,” then a mid-run change that forces the agent to rethink.
+
+The three primary scenarios used in this study were:
+
+\textbf{Drug Filter Shock (Data Science)}
+\begin{itemize}
+    \item Task: Filter chemical data and refine selection criteria
+    \item Shock: Replace a simple column lookup with an external API call
+    \item Tests: Flexibility and willingness to modify working code
+\end{itemize}
+
+\textbf{Directory Organizer Shock (System Operations)}
+\begin{itemize}
+    \item Task: Clean up a cluttered directory by grouping files
+    \item Shock: Change the sorting rule mid-task
+    \item Tests: Inhibition of actions already underway
+\end{itemize}
+
+\textbf{Log Parsing Shock (ETL Pipeline)}
+\begin{itemize}
+    \item Task: Extract structured records from semi-structured logs
+    \item Shock: Alter schema assumptions in the middle of parsing
+    \item Tests: Ability to refactor logic under new constraints
+\end{itemize}
+
+These scenarios are deliberately lightweight on the surface, yet they reveal deep structural vulnerabilities when requirements shift.
+
+\section{Early Observations from Running These Tests}
+A clear, repeated pattern emerged across all experiments \cite{Chen2024ToolsFail, Chen2023ToolEmu}:
+\begin{itemize}
+    \item SCR spikes the moment a requirement changes, indicating internal confusion
+    \item token entropy remains low, creating an illusion of confidence
+    \item agents often fall into repetitive stagnation loops, repeatedly executing the same failing tool action
+    \item context becomes polluted, causing the agent to rely on outdated instructions
+\end{itemize}
+
+This combination of hidden confusion and outward certainty is the central challenge for building dependable autonomous agents.
+
+\section{Why These Findings Matter for Real Systems}
+In production, silent failure is worse than visible failure. The agent keeps going, sounds confident, and can corrupt state before anyone notices. The issue is not that models fail—failure is expected—it is that they fail quietly and repetitively.
+
+The work in this thesis aims to shift the conversation from “Can the model solve a benchmark?” to “Can the model maintain coherence when the world changes around it?” The latter is much closer to the reality of production systems.
+
+Moreover, this research provides a concrete tool—SCR—for detecting collapse early enough to intervene. This opens the door to dynamic model handoff architectures, where a stronger or more capable agent is brought in only when collapse is detected. This has immediate implications for cost, reliability, and system design.
+
+\section{How This Thesis Is Organized}
+To keep the narrative clear, the remainder of the thesis is structured as follows:
+\begin{itemize}
+    \item Chapter 2 provides a comprehensive review of the literature on agent failures, RLHF miscalibration, and semantic uncertainty.
+    \item Chapter 3 formalizes the theoretical underpinnings of cognitive collapse and explains why token-level metrics are insufficient.
+    \item Chapter 4 presents the complete system design, including architectural diagrams, metric definitions, and the branching-probe algorithm.
+    \item Chapter 5 describes the experimental setup and presents results across all stress-testing scenarios.
+    \item Chapter 6 interprets these findings and discusses implications for real-world agent design.
+    \item Chapter 7 concludes with limitations and future research directions.
+\end{itemize}
+
+\section{Main Contributions}
+This thesis makes four contributions:
+\begin{enumerate}
+    \item It identifies and characterizes a recurring silent failure mode in RLHF-trained agents under dynamic task conditions.
+    \item It introduces Semantic Collapse Ratio (SCR), a practical and theoretically grounded metric for evaluating internal divergence in agent reasoning.
+    \item It presents a reproducible framework for stress-testing agents in multi-step, non-stationary environments.
+    \item It demonstrates empirically that SCR provides strong early-warning signals that entropy-based methods miss entirely.
+\end{enumerate}
+
+% --- CHAPTER 2 ---
+\chapter{Literature Review}
+
+This chapter reviews the existing body of work regarding Large Language Model (LLM) agents, with a specific focus on failure modes, uncertainty quantification, and the limitations of current evaluation benchmarks.
+
+\section{Agent Failures and Silent Errors}
+Recent studies have increasingly documented the fragility of LLM agents in complex environments. Chen et al. \cite{Chen2024ToolsFail} demonstrated how tool-use mistakes often remain hidden, while Chen et al. \cite{Chen2023ToolEmu} found that nearly 68.8\% of simulated failures in controlled environments would likely occur in real-world tool use. Even agents designed with safety filters fail approximately 23.9\% of the time in these scenarios.
+
+Benchmarks such as ToolSandbox \cite{Zhou2024ToolSandbox} and $\tau$-bench \cite{Fu2024Tau} have introduced stateful, multi-turn evaluation protocols that reveal dependencies on hidden state, which static benchmarks miss. Furthermore, Grattafiori et al. \cite{Grattafiori2025MCPMark} emphasized the difficulty of realistic CRUD-heavy tasks, reporting that even capable models like GPT-4-medium achieve only a 52.56\% pass rate. Jiang et al. \cite{Jiang2025DarkPatterns} also highlighted a concerning tendency for agents to miss manipulative GUI patterns and proceed with unsafe actions. Collectively, these works support the argument that agents often fail quietly, necessitating stateful benchmarks to expose these vulnerabilities.
+
+\section{RLHF Miscalibration and Confidence}
+A significant challenge in monitoring agent reliability is the decoupling of model confidence from correctness. Chen et al. \cite{Chen2025Overconfidence} documented how Reinforcement Learning from Human Feedback (RLHF) tends to suppress hesitation, leading models to sound confident even when wrong. Tian et al. \cite{Tian2023Calibration} showed that while verbalized confidence is often more accurate than token probability, both metrics become unreliable after RLHF fine-tuning.
+
+Research by Perez et al. \cite{Perez2022Discovering, Perez2024Mislead} linked RLHF to "inverse scaling" and persuasive-but-incorrect behaviors, where models learn to mislead human evaluators. Wang et al. \cite{Wang2024StyleOutweighs} further demonstrated that reward models often prioritize style over substance. Proposals for better calibration, such as those by Li et al. \cite{Li2024BeyondScalar} and Dong et al. \cite{Dong2025CHARM}, suggest new reward modeling techniques, but for existing models, token entropy remains a flawed signal.
+
+\section{Semantic Uncertainty and Consistency}
+To address the limitations of token entropy, recent work has turned to semantic consistency. Zhou et al. \cite{Zhou2024Consistency} found that consistency-based Uncertainty Quantification (UQ) outperforms reliability-based methods, a finding that directly parallels the "Branching Probes" used in this thesis.
+
+Barber et al. \cite{Barber2022ConformalPrediction} provided distribution-free foundations for non-parametric uncertainty sets, while Blei et al. \cite{Blei2019Model} formalized methods for comparing embedding clusters. Additionally, Chen et al. \cite{Chen2025Ensemble} showed that ensemble embeddings improve the robustness of semantic similarity measures. These theoretical foundations justify the use of embedding-space metrics, such as the Semantic Collapse Ratio (SCR), as a more reliable signal of agent stability.
+
+\section{Context Management and Long-Horizon Stability}
+Long-horizon tasks introduce the problem of "context rot." Wang et al. \cite{Wang2025ComplexityTrap} showed that simple observation masking can rival sophisticated summarization, implying that the degradation of reasoning over long contexts is a structural issue.
+
+Chen et al. \cite{Chen2024HiAgent} proposed hierarchical memory structures that doubled success rates and reduced step counts. Similarly, Zhang et al. \cite{Zhang2025ContextFolding} demonstrated methods to reduce active context by 10x, while Zhou et al. \cite{Zhou2025MemTool} and Guo et al. \cite{Guo2024MOSS} explored dynamic memory management tools. These findings underscore the necessity of active context management strategies, such as the rescue protocols proposed in this framework.
+
+\section{Dynamic Benchmarks and Stress Tests}
+The validity of static benchmarks has been increasingly questioned. Jimenez et al. \cite{Jimenez2024SWEBenchPlus} and Wang et al. \cite{Wang2025SavingSWE} revealed significant issues with SWE-bench, including 32.67\% solution leakage and 31.08\% weak tests, suggesting that true resolution rates are much lower (approx. 3.97\%) than reported.
+
+Newer frameworks like ToolSandbox, $\tau$-bench, and MCPMark demonstrate the value of multi-turn, stateful stress testing. Li et al. \cite{Li2024SWEAgent} also highlighted that interface design critically impacts agent performance. These studies motivate the scenario-based, perturbation-heavy design of the Entropic Stress-Test Framework.
+
+\section{Summary}
+The literature confirms that silent failure is a widespread issue in LLM agents, exacerbated by RLHF-induced overconfidence. Semantic divergence methods offer a promising alternative for detecting instability, while recent advances in context management highlight the need for dynamic rescue protocols. This thesis builds upon these insights by proposing a unified framework for measuring and mitigating cognitive collapse in non-stationary environments.
+
+% --- CHAPTER 3 ---
+\chapter{The Mathematics of Cognitive Collapse}
+
+\section{Rethinking Entropy: Why the Classic Metric Breaks Down}
+Token-level entropy has long been used as a quick way to gauge how confident a language model is about its next output. The idea is straightforward: when the probability distribution over the next token is sharp, the model is “confident”; when it is diffuse, the model is “uncertain.” Formally, entropy for the next token is:
+
+\begin{equation}
+H(w_{t+1} \mid w_{1:t}) = -\sum_{v \in \mathcal{V}} P(v \mid w_{1:t}) \log P(v \mid w_{1:t})
+\end{equation}
+
+In older, pre-RLHF models, this relationship held reasonably well. When the model didn’t know what to say, it really did spread probability mass across multiple candidates.
+
+But RLHF changes this dynamic in a subtle but important way. Human rating tends to prefer answers that sound confident. Over time, models internalize this preference: they learn to collapse their probability distributions even when they are not certain \cite{Chen2025Overconfidence, Perez2024Mislead, Wang2024StyleOutweighs}. In effect, RLHF introduces a soft penalty term that pushes the learned policy toward low-entropy outputs:
+
+\begin{equation}
+\max_\theta \mathbb{E}[R(x)] - \beta H_\theta(x)
+\end{equation}
+
+The presence of this entropy-minimizing term means that even when a model is internally conflicted, its surface distribution remains calm \cite{Tian2023Calibration}. In the experiments that motivated this thesis, entropy often stayed near zero during moments when the agent was clearly struggling.
+
+This mismatch is the first clue that we need a deeper lens than token entropy to make sense of cognitive collapse.
+
+\section{The Blind Spot: Token Entropy Doesn’t Track Semantic Uncertainty}
+To see the problem more concretely, consider a situation where the agent is torn between several fundamentally different next actions: reading a file, rewriting code, asking for help, or searching documentation. Each of these actions may begin with innocuous tokens (“I”, “Let”, “First”, etc.), so the distribution over the first word does not reflect the diversity of intended actions.
+
+Entropy captures ambiguity in the surface form, not in the underlying semantic direction. Formally, what we care about is:
+
+\begin{equation}
+H_{\text{semantic}}(a)
+\end{equation}
+
+not
+
+\begin{equation}
+H_{\text{token}}(w)
+\end{equation}
+
+These are not equivalent. Token entropy can be low even when semantic entropy is high. This is the core limitation: our confidence metric is pointed at the wrong part of the system.
+
+\section{Why Embedding Space Gives a Better Window Into the Agent’s Mind}
+Vector embeddings give us a convenient way to represent the meaning of a text snippet. When we map a response $t$ into an embedding $\mathbf{e}$, we preserve its semantic structure in a geometric form \cite{Blei2019Model, Chen2025Ensemble}. Using a lightweight encoder such as all-MiniLM-L6-v2, we obtain:
+
+\begin{equation}
+\mathbf{e} = f_{\text{embed}}(t)
+\end{equation}
+
+These embeddings have useful properties:
+\begin{itemize}
+    \item semantically similar responses occupy nearby regions
+    \item dissimilar plans diverge in direction
+    \item after normalization, the vectors behave approximately as points on a hypersphere
+\end{itemize}
+
+The distance between two embeddings is typically measured using cosine distance:
+
+\begin{equation}
+d_{\cos}(\mathbf{e}_i, \mathbf{e}_j) = 1 - \frac{\mathbf{e}_i \cdot \mathbf{e}_j}{\|\mathbf{e}_i\| \|\mathbf{e}_j\|}
+\end{equation}
+
+This value is small when two responses mean similar things, and large when they diverge. It provides a direct way to examine the similarity across different “candidate plans” that the model implicitly considers.
+
+\section{Formalizing the Semantic Collapse Ratio (SCR)}
+SCR came out of a very simple idea: If a model is confused, its possible next actions will differ more than usual.
+
+To turn this intuition into a measurable quantity, we follow four steps:
+
+\textbf{Step 1: Generate Parallel Branches}
+
+From the same context $C_t$, we sample $N$ alternative next actions:
+
+\begin{equation}
+B = \{ b_1, \dots, b_N \}
+\end{equation}
+
+These branches are produced at a slightly elevated temperature to reveal the diversity of the model’s internal possibilities \cite{Zhou2024Consistency}.
+
+\textbf{Step 2: Embed Each Branch}
+
+\begin{equation}
+\mathbf{e}_i = f_{\text{embed}}(b_i)
+\end{equation}
+
+\textbf{Step 3: Compute Pairwise Distances}
+
+\begin{equation}
+D_{ij} = d_{\cos}(\mathbf{e}_i, \mathbf{e}_j)
+\end{equation}
+
+\textbf{Step 4: Average the Divergences}
+
+\begin{equation}
+\text{SCR}_t = \frac{1}{N(N-1)} \sum_{i=1}^{N} \sum_{j>i}^{N} D_{ij}
+\end{equation}
+
+This gives a single scalar between 0 (completely stable) and 1 (fully divergent). In practice, values above ~0.40 correlated strongly with collapse events in our experiments.
+
+\section{Geometric Interpretation: What Collapse Looks Like in High Dimensions}
+It helps to think about SCR visually—even if only conceptually. Imagine each candidate next step as a point on the surface of a large hypersphere (since embeddings are normalized). When the agent is stable, these points cluster tightly; the average pairwise distance is small \cite{Blei2019Model}.
+
+When the agent becomes confused, the points spread apart, occupying more volume in the space. A useful companion measure is the radius of gyration:
+
+\begin{equation}
+R_g = \sqrt{ \frac{1}{N} \sum_{i=1}^{N} \lVert \mathbf{e}_i - \bar{\mathbf{e}} \rVert^2 }
+\end{equation}
+
+where $\bar{\mathbf{e}}$ is the centroid of the cluster. Empirically, we observe:
+
+\begin{equation}
+\text{SCR} \approx 2R_g^2
+\end{equation}
+
+which tells us that SCR essentially measures the “semantic spread” of the agent’s internal options at any given moment.
+
+\section{Modeling Collapse as a Dynamical Process}
+To capture how collapse evolves rather than just when it happens, we can model the agent’s state in terms of three interacting variables:
+\begin{itemize}
+    \item $C_t$: internal context clarity
+    \item $S_t$: SCR at time $t$
+    \item $H_t$: token entropy
+\end{itemize}
+
+When a shock occurs at time $t_{\text{shock}}$, the agent must revise its plan. This introduces noise or “contamination” into the context:
+
+\begin{equation}
+C_{t+1} = C_t + \alpha (1 - C_t)
+\end{equation}
+
+As confusion spreads, SCR increases:
+
+\begin{equation}
+S_{t+1} = S_t + \beta C_t (S_{\max} - S_t)
+\end{equation}
+
+Meanwhile entropy tends to stay artificially low due to RLHF-induced suppression:
+
+\begin{equation}
+H_{t+1} = \max(H_t - \gamma C_t, H_{\min})
+\end{equation}
+
+Taken together, these equations describe a system that becomes internally unstable even as its external signals remain deceptively calm.
+
+\section{When the Agent Works Hard but Learns Nothing: Information Gain Efficiency}
+Another way to capture collapse is by measuring whether each step actually reduces uncertainty. If the agent keeps taking actions that don’t change its internal state, it is effectively spinning its wheels.
+
+We define Information Gain Efficiency (IGE) as:
+
+\begin{equation}
+\text{IGE}_t = \frac{H_{\text{pre}}^{(t)} - H_{\text{post}}^{(t)}}{C_{\text{tokens}}^{(t)}}
+\end{equation}
+
+A near-zero value combined with large token consumption indicates thrashing: high effort, low progress.
+
+This metric reveals situations where the agent repeatedly executes commands without refining its understanding—a pattern that prominently appeared in stagnation loops.
+
+\section{Measuring Drift Away From the Goal: Regressive Debt Index}
+Sometimes the agent is not just confused—it is confidently pursuing the wrong path. To measure this deviation from the intended next step, we define Regressive Debt Index (RDI):
+
+\begin{equation}
+\text{RDI}_t = d_{\cos}(\mathbf{e}_{\text{current}}, \mathbf{e}_{\text{truth}})
+\end{equation}
+
+High RDI indicates that the agent’s chosen action is drifting away from the correct trajectory. This metric complements SCR: SCR captures internal divergence, while RDI captures divergence from the task goal.
+
+\section{Quantifying Predictive Power: Statistical Validation}
+To test whether SCR genuinely predicts failure, we use point-biserial correlation:
+
+\begin{equation}
+r_{pb} = \frac{M_1 - M_0}{s} \sqrt{\frac{n_1 n_0}{n^2}}
+\end{equation}
+
+Where $M_1$ is the SCR prior to collapse, and $M_0$ the SCR during successful steps. In our trials, the correlation was:
+
+\begin{equation}
+r_{pb} = 0.78, \quad p < 0.001
+\end{equation}
+
+A complementary ROC analysis showed:
+\begin{itemize}
+    \item SCR AUC = 0.92
+    \item Entropy AUC = 0.51 (no better than random)
+\end{itemize}
+
+This confirms that SCR captures something meaningful that entropy misses entirely.
+
+\section{Consolidated View: Two Spaces, Two Behaviors}
+Across all the mathematics, the key insight is surprisingly simple \cite{Zhou2024Consistency, Barber2022ConformalPrediction}:
+\begin{itemize}
+    \item Token space gives a stable, but misleading view of confidence
+    \item Semantic vector space reveals the true internal divergence
+\end{itemize}
+
+Collapse is precisely the moment when these two spaces drift apart: entropy indicates certainty while SCR indicates fracture.
+
+\section{Broader Theoretical Implications}
+The findings in this chapter point toward three important principles:
+\begin{enumerate}
+    \item RLHF reshapes the confidence surface of modern models, suppressing outward signs of uncertainty \cite{Chen2025Overconfidence, Perez2022Discovering, Perez2024Mislead}.
+    \item Semantic uncertainty and token uncertainty are different quantities, and only the former correlates with reasoning stability.
+    \item Vector-space geometry provides a natural language to talk about collapse, divergence, and loss of coherence.
+\end{enumerate}
+
+These principles motivate the design decisions in the next chapter, where we move from theory to architecture.
+
+% --- CHAPTER 4 ---
+\chapter{Methodology: Building the Entropic Stress-Test Framework}
+
+This chapter describes how the Entropic Stress-Test Framework was designed and implemented. While the previous chapter provided the mathematical motivation for SCR and related metrics, here the focus shifts to the engineering architecture that allows us to observe, measure, and analyze cognitive collapse in real agents. The system consists of four major components—the Orchestrator, the Agent Wrapper, the Sandbox, and the Metric Service—supported by a set of scenario definitions and logging utilities. Together, these elements create a realistic and instrumented environment for evaluating model stability under non-stationary task constraints.
+
+\section{System Architecture Overview}
+At a high level, the framework operates as a loop:
+\begin{enumerate}
+    \item The Orchestrator presents the agent with task instructions.
+    \item The agent decides the next action.
+    \item The Sandbox executes that action and returns the result.
+    \item The Metric Service evaluates internal and external signals.
+    \item The Orchestrator updates the simulation state and determines whether to continue, shock the agent, or intervene.
+\end{enumerate}
+
+This feedback loop continues for a fixed number of steps or until the agent collapses.
+
+\section{The Orchestrator: Simulation Engine and Control Loop}
+The Orchestrator is the “brain” of the system. It tracks the scenario state, manages agent history, handles shocks, and coordinates metric collection. In essence, it acts as a deterministic state machine controlling the entire experiment \cite{Zhou2024ToolSandbox, Fu2024Tau}.
+
+\textbf{Core Responsibilities}
+\begin{itemize}
+    \item Load and initialize a scenario
+    \item Maintain the running history of agent actions and observations
+    \item Inject perturbations at pre-defined steps
+    \item Trigger Branching Probes when needed \cite{Zhou2024Consistency}
+    \item Detect panic or collapse conditions
+    \item Optionally switch to a rescue agent
+\end{itemize}
+
+\textbf{Pseudocode (Simplified Orchestrator Loop)}
+\begin{lstlisting}[language=Python, caption=Orchestrator Control Loop]
+procedure RUN_SCENARIO(scenario, agent, metrics)
+    state = INITIALIZE_STATE(scenario)
+    history = []
+    panic_counter = 0
+
+    for step in 1..scenario.max_steps do
+        if step == scenario.perturbation_step then
+            APPLY_SHOCK(state, scenario.perturbation)
+        end if
+
+        action = agent.DECIDE_NEXT_ACTION(history)
+        result = SANDBOX_EXECUTE(action)
+
+        APPEND(history, (action, result))
+
+        scr = metrics.COMPUTE_SCR(history)
+        entropy = metrics.COMPUTE_ENTROPY(action)
+
+        LOG(step, action, result, scr, entropy)
+
+        if DETECT_COLLAPSE(scr, entropy, panic_counter) then
+            return FAILURE_STATE
+        end if
+    end for
+
+    return SUCCESS_STATE
+end procedure
+\end{lstlisting}
+
+\textbf{Explanation}
+This loop gives the Orchestrator full control over the simulation. After each agent action, it collects metrics, evaluates stability, and checks whether intervention is required. This structure also makes experiments reproducible, since every run follows a consistent pipeline.
+
+\section{The Agent Wrapper: A Uniform Interface for LLMs}
+The framework supports any model that exposes a chat-completion API. The Agent Wrapper unifies these models behind a common interface, making it easy to swap agents during experiments (e.g., junior → senior model). \cite{Chen2023ToolEmu, Li2024SWEAgent}
+
+\textbf{Responsibilities}
+\begin{itemize}
+    \item Format messages into the correct API structure
+    \item Extract the agent’s intended next action (either a tool invocation or plain response)
+    \item Generate multiple next-step candidates for Branching Probes
+    \item Maintain consistency in logging and error handling
+\end{itemize}
+
+\textbf{Pseudocode (Agent Decision & Branching)}
+\begin{lstlisting}[language=Python, caption=Agent Decision Logic]
+procedure DECIDE_NEXT_ACTION(history)
+    response = CALL_MODEL(history, temperature=0.1)
+    return PARSE_ACTION(response)
+end procedure
+
+procedure GENERATE_BRANCHES(history, N)
+    branches = []
+    for i in 1..N do
+        resp = CALL_MODEL(history, temperature=0.7)
+        APPEND(branches, PARSE_ACTION(resp))
+    end for
+    return branches
+end procedure
+\end{lstlisting}
+
+\textbf{Explanation}
+A low temperature is used during normal operation to keep actions consistent. A higher temperature is used for Branching Probes since we want to expose the diversity of possible next actions.
+
+\section{The Sandbox: Controlled Execution Environment}
+The Sandbox isolates the agent from the host system and ensures all actions have real consequences. Each scenario runs inside a clean Docker container with its own file structure and tools.
+
+\textbf{Key Design Goals}
+\begin{itemize}
+    \item Prevent harmful commands from affecting the host
+    \item Allow real execution (file operations, parsing, etc.)
+    \item Provide consistent behavior across runs
+    \item Capture output exactly as the agent sees it
+\end{itemize}
+\cite{Li2025RedTeamCUA, Guo2025AgentGuard}
+
+\textbf{Pseudocode (Sandbox Command Execution)}
+\begin{lstlisting}[language=Python, caption=Sandbox Execution]
+procedure SANDBOX_EXECUTE(action)
+    cmd = FORMAT_COMMAND(action)
+    wrapped = APPLY_TIMEOUT(cmd, limit=30s)
+    (status, output) = CONTAINER_RUN(wrapped)
+    return {status, output}
+end procedure
+\end{lstlisting}
+
+\textbf{Explanation}
+Every command goes through a timeout wrapper to prevent infinite hangs. The Sandbox does not mock failures—if the agent deletes a file or runs an invalid command, the system behaves exactly as a real environment would.
+
+\section{Metric Service: SCR, Entropy, and Diagnostic Tools}
+The Metric Service computes all measures required to analyze collapse. Unlike the Orchestrator, which manages workflow, this component focuses solely on numerical evaluation.
+
+\textbf{Metrics Provided}
+\begin{itemize}
+    \item \textbf{SCR} — semantic divergence \cite{Zhou2024Consistency}
+    \item \textbf{Token entropy} — model’s surface confidence
+    \item \textbf{Information Gain Efficiency (IGE)}
+    \item \textbf{Regressive Debt Index (RDI)}
+    \item \textbf{Compression ratio} — signals repetition loops
+\end{itemize}
+
+\textbf{Pseudocode (Metric Computation)}
+\begin{lstlisting}[language=Python, caption=SCR Calculation]
+procedure COMPUTE_SCR(branches)
+    if COUNT(branches) < 2 then
+        return 0
+    end if
+
+    embeddings = EMBED(branches)
+    distances = []
+
+    for i in 1..N do
+        for j in i+1..N do
+            d = COSINE_DISTANCE(embeddings[i], embeddings[j])
+            APPEND(distances, d)
+        end for
+    end for
+
+    return AVERAGE(distances)
+end procedure
+\end{lstlisting}
+
+\textbf{Explanation}
+SCR takes the average pairwise divergence of all branches. A rise in SCR indicates that the agent’s internal next-step candidates are spreading apart—an early sign of collapse.
+
+\section{Branching Probes: Capturing Internal Divergence}
+Branching Probes are central to this framework. They measure not what the agent does, but what the agent could have done.
+
+\textbf{Pseudocode (Running a Branching Probe)}
+\begin{lstlisting}[language=Python, caption=Branching Probe Execution]
+procedure RUN_BRANCHING_PROBE(history, agent, metrics)
+    branches = agent.GENERATE_BRANCHES(history, N=5)
+    intents = EXTRACT_INTENTS(branches)
+    scr = metrics.COMPUTE_SCR(intents)
+    return {scr, intents}
+end procedure
+\end{lstlisting}
+
+\textbf{Explanation}
+Branches are limited to 5 because this provides enough coverage to detect divergence without excessive compute. Extracting “intents” ensures that we evaluate semantic differences rather than token-level variations.
+
+\section{Panic Detection and Intervention Logic}
+The Orchestrator uses SCR and entropy together to check whether the agent is entering collapse. Repeated panic triggers allow the system to swap agents or clean context.
+
+\textbf{Pseudocode (Collapse Detection)}
+\begin{lstlisting}[language=Python, caption=Panic Detection Logic]
+procedure DETECT_COLLAPSE(scr, entropy, counter)
+    if scr > SCR_THRESHOLD then
+        counter = counter + 1
+    else
+        counter = 0
+    end if
+
+    if counter >= PANIC_LIMIT then
+        return TRUE
+    else
+        return FALSE
+    end if
+end procedure
+\end{lstlisting}
+
+\textbf{Explanation}
+A single spike may be noise; repeated spikes indicate loss of coherence. This design mirrors how humans detect confusion through repeated hesitation or incorrect actions.
+
+\section{Scenario Definitions}
+Each scenario specifies:
+\begin{itemize}
+    \item initial prompt
+    \item shock point
+    \item shock instruction
+    \item constraints
+    \item maximum steps
+    \item success criteria
+\end{itemize}
+\cite{Jimenez2024SWEBenchPlus, Wang2025SavingSWE}
+
+\textbf{Pseudocode (Scenario Structure)}
+\begin{lstlisting}[language=Python, caption=Scenario Schema]
+structure SCENARIO
+    id
+    name
+    initial_prompt
+    perturbation_step
+    perturbation_instruction
+    max_steps
+end structure
+\end{lstlisting}
+
+\textbf{Explanation}
+This allows the framework to define and run new stress-test tasks without code changes—only scenario files need to be added.
+
+\section{Experiment Runner and Logging}
+A thin experiment runner script ties everything together. After each step, it logs:
+\begin{itemize}
+    \item SCR
+    \item token entropy
+    \item agent action type
+    \item execution result
+    \item panic counters
+    \item compression ratio
+\end{itemize}
+
+\textbf{Pseudocode (Experiment Runner)}
+\begin{lstlisting}[language=Python, caption=Experiment Runner]
+procedure RUN_EXPERIMENT(config)
+    scenario = LOAD_SCENARIO(config.id)
+    agent = LOAD_AGENT(config.model)
+    metrics = INIT_METRICS()
+
+    result = RUN_SCENARIO(scenario, agent, metrics)
+
+    SAVE_LOGS()
+    GENERATE_PLOTS()
+end procedure
+\end{lstlisting}
+
+\textbf{Explanation}
+Plotting tools use these logs to produce SCR vs. step, entropy vs. step, and stagnation loop signatures—crucial for interpreting collapse dynamics.
+
+\section{Calibration and Validation Steps}
+Before running real trials, three calibration passes ensure the system behaves consistently:
+\begin{itemize}
+    \item Baseline entropy calibration
+    \item SCR threshold estimation
+    \item Embedding model sanity checks
+\end{itemize}
+
+\textbf{Pseudocode (Threshold Calibration)}
+\begin{lstlisting}[language=Python, caption=Threshold Calibration]
+procedure CALIBRATE_THRESHOLD(data)
+    labels = HUMAN_LABEL_STATES(data)
+    scr_values = EXTRACT_SCR(data)
+    threshold = FIND_OPTIMAL_BOUNDARY(scr_values, labels)
+    return threshold
+end procedure
+\end{lstlisting}
+\cite{Barber2022ConformalPrediction}
+
+\section{Methodological Limitations}
+While the framework is robust, some limitations remain:
+\begin{itemize}
+    \item Branching Probes increase compute cost
+    \item Embedding models introduce their own biases
+    \item Current scenarios cover only three task families
+    \item Thresholds must be tuned per model
+\end{itemize}
+
+Despite these constraints, the system is modular and easy to extend to new models, tasks, and metrics.
+
+% --- CHAPTER 5 ---
+\chapter{Experimental Results}
+
+This chapter summarizes the latest runs (Dec 09, 2025) of the Entropic Stress-Test Framework. All runs used \texttt{deepseek/deepseek-v3.2} with 20-step limits for shock scenarios and 30 steps for the legacy refactor challenge. Metrics were logged each step; no rescue handoff was enabled in these runs \cite{Zhou2024Consistency, Chen2023ToolEmu}.
+
+\section{Experimental Setup (Current)}
+\begin{itemize}
+    \item Sandbox: fresh container per run; real tool execution.
+    \item Probes: Branching probes on shock steps; entropy recorded every step.
+    \item Runs covered three shock scenarios (Drug Filter, File Organizer, Data Pipeline) and a control-style Legacy Refactor Challenge.
+\end{itemize}
+
+\section{Latest Run Snapshot (Dec 2025)}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|p{4cm}|l|l|l|l|p{3cm}|} \hline
+\textbf{Scenario} & \textbf{Steps} & \textbf{Events} & \textbf{Max SCR} & \textbf{Max Entropy} & \textbf{Notes} \\ \hline
+Drug Filter Shock & 20 & 12/6/2 & 0.237 & 0.160 & Shock applied twice; SCR spike mild; entropy low \\ \hline
+Drug Filter Shock & 20 & 3/15/2 & 0.230 & 0.231 & Tool-heavy loop after shock; entropy stays low/moderate \\ \hline
+File Organizer Shock & 20 & 14/5/1 & \textbf{0.337} & 0.076 & Highest SCR in this batch; entropy flat \\ \hline
+File Organizer Shock & 20 & 3/16/1 & 0.068 & 0.142 & Minimal SCR change despite shock; tool spam \\ \hline
+Data Pipeline Shock & 20 & 16/3/1 & 0.270 & 0.050 & SCR rises on shock; entropy near zero \\ \hline
+Data Pipeline Shock & 20 & 12/7/1 & 0.025 & \textbf{0.267} & No SCR probes fired; entropy highest of the batch \\ \hline
+Legacy Refactor Challenge & 30 & 19/11/0 & 0.000 & 0.127 & Control task; no probes; long run with low entropy \\ \hline
+Legacy Refactor Challenge & 30 & 1/29/0 & 0.000 & 0.138 & Tool spam; no SCR \\ \hline
+Legacy Refactor Challenge & 30 & 1/29/0 & 0.000 & \textbf{0.239} & Highest entropy among control runs; no SCR \\ \hline
+\end{tabular}
+\caption{Metrics and Failure Modes by Scenario}
+\label{tab:results}
+\end{table}
+
+\section{Visual Analysis of Failure Modes}
+The following plots illustrate the trajectory of Entropy, SCR, and other metrics over time for each scenario.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[height=0.40\textheight, keepaspectratio]{drug_filter_shock.png}
+    \caption{Drug Filter Shock: SCR spike at Step 4 marks the onset of cognitive collapse.}
+    \label{fig:drug_filter}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[height=0.40\textheight, keepaspectratio]{file_organizer_shock.png}
+    \caption{File Organizer Shock: Significant SCR divergence coincides with rule inhibition failure.}
+    \label{fig:file_organizer}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[height=0.40\textheight, keepaspectratio]{data_pipeline_shock.png}
+    \caption{Data Pipeline Shock: SCR detects confusion during schema breaking change.}
+    \label{fig:data_pipeline}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[height=0.40\textheight, keepaspectratio]{legacy_refactor_challange.png}
+    \caption{Legacy Refactor Challenge: Low SCR indicates stability, but termination failure persists.}
+    \label{fig:legacy_refactor}
+\end{figure}
+
+\section{Analysis of Failure Modes}
+\begin{itemize}
+    \item \textbf{SCR spikes align with shocks:} File Organizer (0.337) and Data Pipeline (0.270) show clear divergence at the perturbation point; Drug Filter shows smaller rises (~0.23). Runs without probes report SCR $\approx$ 0 \cite{Zhou2024Consistency}.
+    \item \textbf{Entropy stays low} even when behavior degrades (0.05–0.23 range); higher entropy (0.267) still failed to warn \cite{Chen2025Overconfidence, Perez2024Mislead}.
+    \item \textbf{Stagnation loops persist:} tool\_execution dominates several runs (e.g., 16–29 tool calls with minimal llm\_reply), mirroring prior “ls/loop” failures even when SCR is low or absent \cite{Chen2023ToolEmu}.
+    \item \textbf{Panic/rescue not triggered:} panic\_counter stayed at 0 in these logs, so no escalations occurred despite loops.
+\end{itemize}
+
+\section{Scenario Notes}
+\begin{itemize}
+    \item \textbf{Drug Filter Shock:} Two shocks injected; modest SCR rise (~0.23) and low entropy; behavior still drifted into tool repetition after acknowledging the change.
+    \item \textbf{File Organizer Shock:} One run showed strong divergence (0.337) at the shock; another barely moved (0.068) but still spammed tools—suggesting shock detection depends on probe coverage.
+    \item \textbf{Data Pipeline Shock:} One run produced SCR 0.270 with near-zero entropy; another skipped probes (SCR 0.025) yet showed the highest entropy of the batch, highlighting probe timing sensitivity.
+    \item \textbf{Legacy Refactor Challenge:} No perturbations and no SCR; entropy stayed low-to-moderate ($\le$ 0.239) while tool spam dominated, reinforcing that stagnation occurs even without shocks (Jimenez2024SWEBenchPlus motivates why static tasks can still mask instability).
+\end{itemize}
+
+\section{Artifacts to Reference}
+\begin{itemize}
+    \item Plots: \texttt{data/results/*.png}
+    \item Logs: \texttt{logs/rescue/*.jsonl}
+\end{itemize}
+
+\section{Chapter Summary}
+The refreshed runs confirm the central finding: token entropy stays calm while internal coherence fractures under shocks. SCR provides the only meaningful early signal when probes fire, but probe timing and coverage matter—runs without probes report SCR $\approx$ 0 even when behavior stalls. Stagnation loops persist in both shock and control settings, underscoring the need for rescue/interrupt logic beyond entropy monitoring.
+
+% --- CHAPTER 6 ---
+\chapter{Discussion \& Implications}
+
+This chapter reflects on what the experimental findings actually tell us about LLM-based agents. While the previous chapter provided quantitative evidence of collapse, the broader question is: What do these failures mean for building reliable autonomous systems? Here, I interpret the results, connect them to practical engineering concerns, and highlight the trade-offs that arise when trying to stabilize long-horizon LLM behavior.
+
+\section{The Cost of Reliability: Why Stability is Not Cheap}
+One of the clearest lessons from the experiments is that reliability does not come for free. Detecting collapse early required Branching Probes, and each probe demanded multiple calls to the underlying model. This inevitably increases compute cost.
+
+A natural question is: Is the extra cost worth it? Based on the failure modes observed, the answer is “yes”—at least for systems where failure has significant consequences.
+
+A single collapse can waste entire sequences of steps. Worse, because stagnation loops look superficially “organized” (the agent confidently repeats a structured command), they can be mistaken for progress. Debugging such episodes in production could require far more runtime and effort than simply monitoring for semantic divergence upfront.
+
+In almost every domain—from banking automation to medical record parsing—the cost of a silent logical failure is high compared to the small incremental compute cost of running a probe every few steps. SCR essentially provides a “health check” on the agent’s reasoning, and like any health check, it is not free—but it is vastly cheaper than recovering from undetected degeneration \cite{Zhou2024Consistency}.
+
+\section{The Rescue Protocol: More Than a Safety Net}
+The idea behind the Rescue Protocol is intuitive: if the agent appears confused, bring in a stronger model or give the current model a reset. But the goal is not to create a hierarchy of “weak agent → strong agent.” Instead, it is to introduce discontinuity into the reasoning process.
+
+During collapse, the agent’s internal state drifts into a narrow loop that it struggles to escape, even as it produces fluent explanations. Simply giving the same agent more tokens will not fix this. What helps is breaking the run:
+\begin{itemize}
+    \item summarize or clean the context,
+    \item possibly switch to a more capable model,
+    \item re-initialize reasoning from a fresh, coherent prompt.
+\end{itemize}
+
+In that sense, the Rescue Protocol behaves more like a circuit breaker than a fallback model. It interrupts the progression of internal noise that would otherwise compound irreversibly \cite{Chen2023ToolEmu, Zhou2024ToolSandbox}.
+
+This is why the protocol is not just a convenience feature—it is central to sustaining long-horizon reasoning \cite{Chen2024HiAgent, Zhang2025ContextFolding}.
+
+\section{The “Why Not Just Use GPT-4?” Argument}
+A common objection to multi-model architectures is: If larger models are more stable, why not use them from the start?
+
+Several findings in this thesis complicate that viewpoint.
+
+\textbf{(1) Cost and Latency}
+State-of-the-art models (GPT-4o, Claude 3.5 Sonnet, etc.) are significantly slower and more expensive. Most real tasks contain long stretches of routine execution—steps where a smaller model performs just as well. Using a heavyweight model for every trivial step is both wasteful and unnecessary.
+
+\textbf{(2) Context Rot Affects All Models}
+Even the strongest models degrade over long contexts. The issue is not simply intelligence level; it is the tendency of LLMs to accumulate subtle inconsistencies as context grows. This means: Running GPT-4 from step 1 to step 200 will not prevent collapse. The decay comes from long-running autoregressive processing itself \cite{Wang2025ComplexityTrap, Zhang2025ContextFolding, Chen2024HiAgent}.
+
+\textbf{(3) “Fresh Eyes” Matter}
+The Rescue Protocol does not work just because a bigger model takes over; it works because the takeover interrupts the corrupted context. A weaker model that gets replaced by the same model with a fresh prompt can recover too.
+
+Thus, the economic argument is only part of the story. The architectural argument—that continuity of context is itself a risk factor—is equally important.
+
+\textbf{(4) SCR Enables Smart Allocation}
+By detecting collapse early, SCR makes hybrid architectures viable. You can:
+\begin{itemize}
+    \item run cheaper models during stable phases,
+    \item escalate only when SCR spikes,
+    \item return to normal once stability is restored.
+\end{itemize}
+
+This dynamic allocation model is not possible with entropy-based signals, since entropy does not reflect actual uncertainty.
+
+In short: It is not about intelligence. It is about knowing when the agent is confused.
+
+\section{Architectural Implications for Agent Design}
+Several design principles emerge from the experiments:
+
+\begin{enumerate}
+    \item \textbf{Confidence Indicators Must Be Semantic:} Token-level distributions simply do not tell us what the model “believes.” Semantic divergence does.
+    \item \textbf{Multi-step Agents Need Built-in Stability Gates:} Long-horizon tasks accumulate noise. SCR gives a way to periodically check whether the agent is drifting.
+    \item \textbf{Interventions Must Happen Early:} Once a stagnation loop begins, recovery becomes increasingly unlikely. Detecting the first moment of fracture is far more effective than detecting the consequences later on.
+    \item \textbf{Context Management Is Critical:} Even with no shocks, context naturally becomes cluttered. Summarization, pruning, and periodic resets can prevent degeneration.
+    \item \textbf{Scenario-Based Testing Is More Realistic Than Static Benchmarks:} Traditional benchmarks assume static environments. Real systems do not. Stress-testing agents under dynamic conditions surfaces weaknesses that benchmarks miss entirely \cite{Jimenez2024SWEBenchPlus, Wang2025SavingSWE, Fu2024Tau, Zhou2024ToolSandbox, Grattafiori2025MCPMark}.
+\end{enumerate}
+
+\section{Broader Implications for RLHF and Future Models}
+The findings also reflect limitations of RLHF itself. Models trained primarily on human preference signals learn to:
+\begin{itemize}
+    \item sound certain when uncertain,
+    \item avoid hedging unless explicitly asked,
+    \item suppress the expression of doubt.
+\end{itemize}
+
+This creates a surface-level fluency that hides internal confusion. While RLHF is useful for improving alignment and usability, it introduces new risks for systems that depend on accurate confidence estimation.
+
+This suggests that future alignment approaches may need:
+\begin{itemize}
+    \item explicit uncertainty modeling,
+    \item training signals for admitting confusion,
+    \item penalties for overconfidence,
+    \item or complementary metrics like SCR that reveal “hidden instability” \cite{Chen2025Overconfidence, Perez2022Discovering, Perez2024Mislead, Wang2024StyleOutweighs}.
+\end{itemize}
+
+LLMs may remain autoregressive for the foreseeable future, but how we train them to communicate uncertainty is likely to evolve.
+
+\section{Closing Perspective on the Results}
+The experiments demonstrate that LLM-based agents fail in systematic, predictable ways—silently, confidently, and often repetitively. SCR provides a simple yet powerful way to see these failures form before they surface. By combining scenario-based stress tests with semantic reasoning metrics, we gain a clearer view of the fragile internal structures that govern long-horizon decision-making in current models.
+
+% --- CHAPTER 7 ---
+\chapter{Conclusion and Future Work}
+
+This thesis set out to investigate how large language model–based agents behave when placed in dynamic, multi-step tasks where requirements shift mid-execution. While existing benchmarks focus heavily on correctness in static settings, real-world workflows are rarely so stable. Systems that rely on LLMs must be prepared for ambiguity, interruptions, and updates that arrive after an initial plan is formed. The Entropic Stress-Test Framework was designed to explore exactly this setting, and the results reveal important insights about failure modes, stability, and the limits of current confidence metrics.
+
+\section{Summary of Contributions}
+Across the chapters, four contributions emerge clearly:
+
+\textbf{(1) Identification of Silent Failure in RLHF-trained Agents}
+The experiments consistently showed that agents can lose coherence without signaling uncertainty. Even when a requirement changes, the model often continues executing an outdated plan with unwavering confidence. This “silent failure” was visible in agent behavior long before traditional metrics detected anything unusual \cite{Chen2024ToolsFail, Chen2023ToolEmu}.
+
+\textbf{(2) Introduction of SCR as a Semantic Stability Metric}
+The Semantic Collapse Ratio proved to be a reliable early warning signal. By examining diverging next-step possibilities rather than surface-level token distributions, SCR captured internal confusion at the exact moment it emerged \cite{Zhou2024Consistency, Barber2022ConformalPrediction}. This provides a complementary tool to entropy and aligns more closely with how humans intuitively detect hesitation or uncertainty in problem-solving.
+
+\textbf{(3) A Modular Framework for Stress-Testing Agents}
+The Entropic Stress-Test Framework integrates a controllable sandbox, an Orchestrator for scenario logic, and a Metric Service that computes SCR and related measures. The system makes it possible to reproduce perturbations, run detailed probes, and observe long-horizon reasoning in a controlled environment \cite{Zhou2024ToolSandbox, Fu2024Tau}.
+
+\textbf{(4) Empirical Evidence of Repetitive Stagnation Loops}
+All experiments—both shock and non-shock—exposed a dominant failure mode: repetitive tool calls, often the exact same command (e.g., directory listing), repeated dozens of times without progress. These loops illustrate a deeper structural issue: once the model’s plan becomes misaligned with the task state, recovery becomes unlikely without explicit intervention \cite{Chen2023ToolEmu}.
+
+Collectively, these contributions offer a clearer picture of why LLM agents struggle in non-stationary conditions, and how monitoring internal semantic structure can reveal collapse earlier than traditional signals.
+
+\section{Limitations}
+Although the framework proved effective for studying collapse, several limitations remain:
+
+\textbf{(1) Limited Scenario Diversity}
+Only three families of tasks were evaluated: file organization, CSV filtering, and basic log parsing. While these tasks are representative, they do not cover more complex domains such as API orchestration, multi-agent collaboration, or long-form planning \cite{Jimenez2024SWEBenchPlus, Grattafiori2025MCPMark}.
+
+\textbf{(2) Single Model Family}
+The experiments focused primarily on one model (DeepSeek v3.2). Other families—OpenAI, Anthropic, Google—may show different collapse patterns, SCR magnitudes, or recovery behaviors. Cross-model comparisons would strengthen the generality of these findings.
+
+\textbf{(3) Embedding Model Bias}
+SCR depends on an embedding model. Different embedding models may cluster semantic meaning differently, which could shift SCR thresholds or introduce bias. While lightweight models work well in practice, the relationship between embedding geometry and agent stability deserves more rigorous study.
+
+\textbf{(4) Compute Overhead}
+Branching Probes require multiple model calls. Although the cost is small compared to the cost of silent failures, the overhead may still be significant for large-scale deployments unless further optimized \cite{Zhou2024Consistency}.
+
+\textbf{(5) Context Rot Not Fully Addressed}
+Several control scenarios collapsed even without shocks. This suggests that long contexts accumulate noise over time, but the current framework does not include automated summarization, pruning, or memory management strategies to counter this \cite{Wang2025ComplexityTrap, Chen2024HiAgent, Zhang2025ContextFolding}.
+
+These limitations highlight the need for broader and more systematic studies of agent stability across diverse conditions.
+
+\section{Future Work}
+The results in this thesis open several promising research directions:
+
+\textbf{(1) Expanding Scenario Libraries}
+New task families—API pipelines, realistic data cleaning, code refactoring, or interactive search tasks—could reveal failure modes not captured in this study. A richer scenario set would also make the framework more suitable for benchmarking.
+
+\textbf{(2) Multi-Agent and Model-Switching Architectures}
+SCR provides a natural trigger for switching between agents of different strengths. Future systems may use SCR to coordinate model handoffs, maintain team stability, or orchestrate collaborative agents with complementary roles \cite{Chen2024HiAgent, Zhang2025ContextFolding}.
+
+\textbf{(3) Real-Time Context Management}
+Integrating automatic context summarizers or rolling memory structures could reduce long-context degradation. An adaptive context-reset mechanism triggered by SCR spikes may significantly improve long-horizon resilience \cite{Wang2025ComplexityTrap, Zhou2025MemTool, Guo2024MOSS}.
+
+\textbf{(4) SCR as a Training Signal}
+One intriguing direction is whether SCR—or semantic divergence more broadly—can be used as part of model training. Penalizing or rewarding certain divergence structures might teach models to regulate internal uncertainty more transparently.
+
+\textbf{(5) Cross-Model Benchmarking}
+Evaluating SCR behavior across GPT-4o, Claude 3.5, Gemini, and other models could reveal universal patterns or model-specific biases. Such cross-evaluation would also position SCR as a standardized measure for agent stability \cite{Fu2024Tau, Grattafiori2025MCPMark}.
+
+\textbf{(6) Integrating with Production Monitoring}
+In real deployments, SCR could augment logging systems, triggering alerts when an agent begins drifting, or initiating a context reset before a full stagnation loop occurs. This would extend the framework beyond research and into practical reliability engineering.
+
+Collectively, these directions outline how SCR and dynamic stress-testing can play a central role in developing the next generation of reliable, reasoning-aware LLM agents.
+
+\section{Closing Remarks}
+LLM-based agents have made remarkable progress, but they remain fragile in subtle ways. As this thesis shows, the biggest risks are not dramatic failures—they are the quiet, confident, and repetitive errors that emerge when an agent’s internal representation becomes misaligned with the task. By shifting the focus from surface fluency to semantic stability, the Entropic Stress-Test Framework offers a new perspective on how these systems think, how they fail, and how they can be made more robust.
+
+The long-horizon future of AI will depend on our ability to detect confusion early, intervene intelligently, and design systems that remain stable even as their environments change. This work is a step toward understanding that challenge more deeply.
+
+% --- REFERENCES ---
+\begin{thebibliography}{99}
+
+\bibitem{Zhang2024AgentSafetyBench} Y. Zhang et al., ``Agent-SafetyBench: Evaluating the Safety of LLM Agents,'' arXiv:2412.14470, 2024.
+\bibitem{Chen2025Aegis} M. Chen et al., ``Aegis: Taxonomy and Optimizations for Overcoming Agent-Environment Failures,'' arXiv:2508.19504, 2025.
+\bibitem{Wang2025WhyDoMultiAgent} Z. Wang et al., ``Why Do Multi-Agent LLM Systems Fail?'' arXiv:2503.13657, 2025.
+\bibitem{Zhang2025VeriLA} Q. Zhang et al., ``VeriLA: A Human-Centered Evaluation Framework for Verification,'' arXiv:2503.12651, 2025.
+\bibitem{Sun2025MedAgentAudit} L. Sun et al., ``MedAgentAudit: Diagnosing Collaborative Failure Modes,'' arXiv:2510.10185, 2025.
+\bibitem{Chen2024ToolsFail} J. Chen et al., ``Tools Fail: Detecting Silent Errors in Faulty Tools,'' arXiv:2406.19228, 2024.
+\bibitem{Guo2024DefiningDetecting} L. Guo et al., ``Defining and Detecting Defects of Autonomous Agents,'' arXiv:2412.18371, 2024.
+\bibitem{Chen2023ToolEmu} J. Chen et al., ``Identifying Risks of LM Agents with ToolEmu,'' arXiv:2309.15817, 2023.
+\bibitem{Zhou2024ToolSandbox} S. Zhou et al., ``ToolSandbox: A Stateful Evaluation Benchmark,'' arXiv:2408.04682, 2024.
+\bibitem{Grattafiori2025MCPMark} A. Grattafiori et al., ``MCPMark: Stress-Testing Realistic MCP Use,'' arXiv:2509.24002, 2025.
+\bibitem{Fu2024Tau} J. Fu et al., ``τ-bench: Tool-Agent-User Interaction Benchmark,'' arXiv:2406.12045, 2024.
+\bibitem{Jiang2025DarkPatterns} H. Jiang et al., ``Dark Patterns Meet GUI Agents,'' arXiv:2509.10723, 2025.
+\bibitem{Raji2019Multiparty} A. Raji et al., ``Multiparty Dynamics and Failure Modes,'' arXiv:1810.10862, 2019.
+\bibitem{Tang2025Empirical} P. Tang et al., ``Empirical Characterization of Outages in LLM Services,'' arXiv:2501.12469, 2025.
+\bibitem{Chen2025Overconfidence} C. Chen et al., ``Taming Overconfidence in LLMs: Reward Calibration in RLHF,'' arXiv:2410.09724, 2025.
+\bibitem{Tian2023Calibration} L. Tian et al., ``Just Ask for Calibration: Strategies for Eliciting Confidence,'' EMNLP 2023.
+\bibitem{Burns2023WeakToStrong} J. Burns et al., ``Weak-to-Strong Generalization,'' arXiv:2312.09390, 2023.
+\bibitem{Perez2022Discovering} N. Perez et al., ``Discovering Language Model Behaviors with Model-Written Evaluations,'' arXiv:2212.09251, 2022.
+\bibitem{Perez2024Mislead} E. Perez et al., ``Language Models Learn to Mislead Humans via RLHF,'' arXiv:2409.12822, 2024.
+\bibitem{Wang2024StyleOutweighs} X. Wang et al., ``Style Outweighs Substance: Failure Modes of LLM Judges,'' arXiv:2409.15268, 2024.
+\bibitem{Li2024BeyondScalar} Z. Li et al., ``Beyond Scalar Reward Model: Learning Generative Judge,'' arXiv:2410.03742, 2024.
+\bibitem{Li2025LengthControlled} Y. Li et al., ``Length-Controlled Margin-Based Preference Optimization,'' arXiv:2502.14643, 2025.
+\bibitem{Zhang2024EfficientPreference} Y. Zhang et al., ``Efficient Preference-based Reinforcement Learning,'' arXiv:2405.18688, 2024.
+\bibitem{Dong2025CHARM} S. Dong et al., ``CHARM: Calibrating Reward Models,'' arXiv:2504.10045, 2025.
+\bibitem{Zhang2025Flattery} Z. Zhang et al., ``Flattery, Fluff, and Fog: Diagnosing Biases in Preference Models,'' arXiv:2506.05339, 2025.
+\bibitem{Yuan2024Contrastive} Y. Yuan et al., ``Contrastive Preference Learning,'' arXiv:2310.13639, 2024.
+\bibitem{Bai2024Limited} Y. Bai et al., ``Limited Generalization of DPO Implicit Reward Models,'' arXiv:2409.03650, 2024.
+\bibitem{Fu2023CausalConfusion} Y. Fu et al., ``Causal Confusion and Reward Misidentification,'' arXiv:2204.06601, 2023.
+\bibitem{Dong2023GeneralTheoretical} X. Dong et al., ``A General Theoretical Paradigm for Learning from Preferences,'' arXiv:2310.12036, 2023.
+\bibitem{Blei2019Model} D. Blei et al., ``Model Comparison for Semantic Grouping,'' arXiv:1904.13323, 2019.
+\bibitem{Yang2022SupMPN} M. Yang et al., ``SupMPN: Supervised Contrastive Learning for STS,'' Appl. Sci., 2022.
+\bibitem{Iacobacci2015SensEmbed} I. Iacobacci et al., ``SensEmbed: Learning Sense Embeddings,'' ACL 2015.
+\bibitem{Levy2015Specializing} O. Levy et al., ``Specializing Word Embeddings for Similarity,'' EMNLP 2015.
+\bibitem{Bulat2016Measuring} N. Bulat et al., ``Measuring Semantic Similarity Using Concept Networks,'' 2016.
+\bibitem{Buscaldi2022Interactive} D. Buscaldi et al., ``Interactive optimization of embedding-based similarity,'' 2022.
+\bibitem{Li2024TexIm} S. Li et al., ``TexIm FAST: Text-to-Image Semantic Similarity,'' arXiv:2406.04438, 2024.
+\bibitem{Chen2025Ensemble} J. Chen et al., ``Ensemble Embedding Approach for Semantic Caching,'' arXiv:2507.07061, 2025.
+\bibitem{Zhou2024Consistency} Z. Zhou et al., ``Consistency Calibration: Improving Uncertainty Calibration,'' arXiv:2410.12295, 2024.
+\bibitem{Barber2022ConformalPrediction} R. Barber et al., ``Gentle Introduction to Conformal Prediction,'' arXiv:2107.07511, 2022.
+\bibitem{Vovk2025Conformal} E. Vovk et al., ``Conformal Prediction: A Data Perspective,'' arXiv:2410.06494, 2025.
+\bibitem{Kruger2023Calibration} S. Krüger et al., ``Calibration in ML Uncertainty Quantification,'' arXiv:2309.06240, 2023.
+\bibitem{Wang2023TreePlanner} Z. Wang et al., ``Tree-Planner: Efficient Close-loop Task Planning,'' arXiv:2310.08582, 2023.
+\bibitem{Liu2025SDA} H. Liu et al., ``SDA-PLANNER: State-Dependency Aware Adaptive Planner,'' arXiv:2509.26375, 2025.
+\bibitem{Guez2025Deliberate} A. Guez et al., ``Deliberate Planning in Language Models,'' 2025.
+\bibitem{Li2025SelfCorrective} J. Li et al., ``Self-Corrective Task Planning by Inverse Prompting,'' IEEE 2025.
+\bibitem{Kim2024PDoctor} H. Kim et al., ``PDoctor: Testing Erroneous Planning in LLM Agents,'' arXiv:2404.17833, 2024.
+\bibitem{Wang2024EnsuringSafety} Y. Wang et al., ``Ensuring Safety in LLM-Driven Robotics,'' IEEE 2024.
+\bibitem{Li2023ReST} J. Li et al., ``ReST meets ReAct: Self-Improvement for Multi-Step Reasoning,'' arXiv:2312.10003, 2023.
+\bibitem{Wang2025ComplexityTrap} A. Wang et al., ``The Complexity Trap: Observation Masking vs Summarization,'' arXiv:2508.21433, 2025.
+\bibitem{Guo2024MOSS} R. Guo et al., ``MOSS: Enabling Code-Driven Evolution,'' arXiv:2409.16120, 2024.
+\bibitem{Li2025Scaling} X. Li et al., ``Scaling LLM Multi-turn RL with Summarization,'' arXiv:2510.06727, 2025.
+\bibitem{Zhao2025SagaLLM} H. Zhao et al., ``SagaLLM: Context Management and Transactions,'' arXiv:2503.11951, 2025.
+\bibitem{Lin2025Efficient} Y. Lin et al., ``Efficient On-Device Agents via Adaptive Context,'' arXiv:2511.03728, 2025.
+\bibitem{Chen2024HiAgent} S. Chen et al., ``HiAgent: Hierarchical Working Memory,'' arXiv:2408.09559, 2024.
+\bibitem{Zhou2025MemTool} Y. Zhou et al., ``MemTool: Optimizing Short-Term Memory,'' arXiv:2507.21428, 2025.
+\bibitem{Zhang2025ContextFolding} H. Zhang et al., ``Scaling Long-Horizon LLM Agent via Context-Folding,'' arXiv:2510.11967, 2025.
+\bibitem{Song2023MemorySandbox} Y. Song et al., ``Memory Sandbox: Interactive Memory Management,'' arXiv:2308.01542, 2023.
+\bibitem{Xie2025AMEM} S. Xie et al., ``A-MEM: Agentic Memory,'' arXiv:2502.12110, 2025.
+\bibitem{Huang2025Lifelong} J. Huang et al., ``Lifelong Dialogue Agents via Timeline Memory,'' arXiv:2406.10996, 2025.
+\bibitem{Sun2025Prospect} J. Sun et al., ``In Prospect and Retrospect: Reflective Memory,'' arXiv:2503.08026, 2025.
+\bibitem{Li2025MemoryConstruction} H. Li et al., ``On Memory Construction and Retrieval,'' arXiv:2502.05589, 2025.
+\bibitem{Shi2023Walking} S. Shi et al., ``Walking Down the Memory Maze,'' arXiv:2310.05029, 2023.
+\bibitem{Zhao2025Enhancing} M. Zhao et al., ``Enhancing Reasoning with Collaboration,'' arXiv:2503.05944, 2025.
+\bibitem{Lhoest2025MemoriesDB} H. Lhoest et al., ``MemoriesDB: Temporal-Semantic-Relational Database,'' Zenodo, 2025.
+\bibitem{Wang2025SavingSWE} Y. Wang et al., ``Saving SWE-Bench: Benchmark Mutation Approach,'' arXiv:2510.08996, 2025.
+\bibitem{Jimenez2024SWEBenchPlus} S. Jimenez et al., ``SWE-Bench+: Enhanced Coding Benchmark,'' arXiv:2410.06992, 2024.
+\bibitem{Zhang2024SWEBenchJava} J. Zhang et al., ``SWE-bench-java: GitHub Issue Resolving for Java,'' arXiv:2408.14354, 2024.
+\bibitem{Zhang2025MultiSWE} L. Zhang et al., ``Multi-SWE-bench: Multilingual Benchmark,'' arXiv:2504.02605, 2025.
+\bibitem{Wang2025Dissecting} C. Wang et al., ``Dissecting the SWE-Bench Leaderboards,'' arXiv:2506.17208, 2025.
+\bibitem{Hu2025Revisiting} Y. Hu et al., ``Revisiting SWE-Bench: Importance of Data Quality,'' IEEE 2025.
+\bibitem{Li2025SWEBenchCL} K. Li et al., ``SWE-Bench-CL: Continual Learning,'' arXiv:2507.00014, 2025.
+\bibitem{Zhang2025UTBoost} S. Zhang et al., ``UTBoost: Rigorous Evaluation on SWE-Bench,'' arXiv:2506.09289, 2025.
+\bibitem{Li2024SWEAgent} C. Li et al., ``SWE-agent: Agent-Computer Interfaces,'' arXiv:2405.15793, 2024.
+\bibitem{Liu2023IsYourCode} J. Liu et al., ``Is Your Code Generated by ChatGPT Really Correct?'' arXiv:2305.01210, 2023.
+\bibitem{OpenAI2024HumanEval} OpenAI et al., ``HumanEval on Latest GPT Models,'' arXiv:2402.14852, 2024.
+\bibitem{Zhu2024HumanEvalPro} Y. Zhu et al., ``HumanEval Pro and MBPP Pro,'' arXiv:2412.21199, 2024.
+\bibitem{Wang2024Evaluating} K. Wang et al., ``Evaluating Software Development Agents,'' arXiv:2410.12468, 2024.
+\bibitem{Binkley2025Benchmarking} P. Binkley et al., ``Benchmarking AI Models in Software Engineering,'' arXiv:2503.05860, 2025.
+\bibitem{Zhang2025Automated} Y. Zhang et al., ``Automated Benchmark Generation,'' arXiv:2503.07701, 2025.
+\bibitem{Li2025RedTeamCUA} G. Li et al., ``RedTeamCUA: Hybrid Web-OS Sandboxes,'' arXiv:2505.21936, 2025.
+\bibitem{Zeng2025Nexus} K. Zeng et al., ``Nexus: Execution-Grounded Test Oracle,'' arXiv:2510.26423, 2025.
+\bibitem{Yahya2025AutoDFBench} H. Yahya et al., ``AutoDFBench: Digital Forensic Code Testing,'' ACM 2025.
+\bibitem{Ivanov2025HumanOversight} M. Ivanov et al., ``Human Oversight in Sandbox Environments,'' IEEE 2025.
+\bibitem{Jiang2024GENRWD} Y. Jiang et al., ``GEN-RWD Sandbox,'' BMC Med Inform Decis Mak 2024.
+\bibitem{Guo2025AgentGuard} X. Guo et al., ``AgentGuard: Safety Evaluation,'' arXiv:2502.09809, 2025.
+\bibitem{Huang2024YouNameIt} M. Huang et al., ``You Name It, I Run It,'' arXiv:2412.10133, 2024.
+\bibitem{Kim2019Secure} T. Kim et al., ``Secure Extensibility via Plugin Sandboxing,'' arXiv:1905.08192, 2019.
+\bibitem{Zhang2021DockerMock} F. Zhang et al., ``DockerMock: Pre-Build Detection,'' arXiv:2104.05490, 2021.
+\bibitem{Felter2017Mining} W. Felter et al., ``Mining Sandboxes for Linux Containers,'' arXiv:1712.05493, 2017.
+\bibitem{Huang2024OOD} Y. Huang et al., ``Out-of-Distribution Data: A Survey,'' ACM Comput. Surveys 2024.
+\bibitem{Li2023Revisiting} Y. Li et al., ``Revisiting Out-of-distribution Robustness,'' arXiv:2306.04618, 2023.
+\bibitem{Liu2024Adversarial} Y. Liu et al., ``Adversarial Robustness vs. OOD Robustness,'' arXiv:2412.10535, 2024.
+\bibitem{Wang2024Assessing} H. Wang et al., ``Assessing Adversarial Robustness,'' arXiv:2405.02764, 2024.
+\bibitem{Qin2024PromptRobust} H. Qin et al., ``PromptRobust,'' arXiv:2306.04528, 2024.
+\bibitem{Chen2024LLAMOS} H. Chen et al., ``LLAMOS: Adversarial Purification,'' arXiv:2405.20770, 2024.
+\bibitem{Wang2024Robustness} B. Wang et al., ``Robustness Over Time,'' arXiv:2308.07847, 2024.
+\bibitem{Shao2024Rapid} M. Shao et al., ``Rapid Response: Mitigating LLM Jailbreaks,'' arXiv:2411.07494, 2024.
+\bibitem{Zhu2025aiXamine} T. Zhu et al., ``aiXamine: Safety Evaluation Platform,'' arXiv:2504.14985, 2025.
+\bibitem{Vig2019Analyzing} I. Vig, ``Analyzing the Structure of Attention,'' arXiv:1906.04284, 2019.
+\bibitem{Hao2019Transformer} M. Hao et al., ``Transformer Dissection,'' arXiv:1908.11775, 2019.
+\bibitem{Ethayarajh2022Measuring} J. Ethayarajh, ``Measuring Contextual Information Mixing,'' arXiv:2203.04212, 2022.
+\bibitem{Sun2024SkipLayer} Y. Sun et al., ``Skip-Layer Attention,'' arXiv:2406.11274, 2024.
+\bibitem{Wang2024PrimalDual} X. Wang et al., ``Primal-Dual Framework for Transformers,'' arXiv:2406.13781, 2024.
+\bibitem{Wang2025NeuralAttention} Y. Wang et al., ``Neural Attention Mechanisms,'' arXiv:2502.17206, 2025.
+
+\end{thebibliography}
+
+\end{document}

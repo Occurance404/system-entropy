@@ -1,0 +1,7 @@
+[
+  {
+    "step": 4,
+    "type": "conflict",
+    "instruction": "CHANGE: Mirror feed shifts to delayed and out-of-order replay; chain reconstruction must remain correct."
+  }
+]

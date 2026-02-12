@@ -21,6 +21,17 @@ A research framework to study how LLM-based agents behave under non-stationary t
   ```
 
 ## Running Experiments
+- Recommended wrapper (isolated, documented session output):
+  ```bash
+  .venv/bin/python scripts/run_experiment_session.py --name rescue_real -- \
+    .venv/bin/python experiments/run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20
+  ```
+  This writes everything under `data/experiments/<timestamp>_<name>/` so runs do not mix.
+- Fair real-agent launcher (preflight + capability-aware defaults):
+  ```bash
+  .venv/bin/python scripts/run_fair_real_session.py --mode rescue_baseline --scenario_id drug_filter_shock --max_steps 20
+  ```
+
 - Baseline or Rescue run (with perturbations, optional handoff):
   ```bash
   python experiments/run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20            # baseline
@@ -50,6 +61,8 @@ A research framework to study how LLM-based agents behave under non-stationary t
 
 Logs land under `logs/rescue/`, `logs/hard_mode/`, or `logs/terminal_bench/`; sandboxes live under `data/sandbox_<scenario>/`.
 Per-run manifests and summaries land under `data/run_artifacts/<run_id>/`.
+When using `scripts/run_experiment_session.py`, these outputs are redirected into
+`data/experiments/<timestamp>_<name>/...` for isolation.
 
 ## Core Concepts
 - **Orchestrator** (`src/orchestrator/engine.py`, implementation in `src/orchestrator/core/orchestrator.py`): injects perturbations, runs branching probes, tracks panic counters, and can switch to a rescue agent.

@@ -1,0 +1,9 @@
+{
+  "scenario_id": "missing_axiom",
+  "title": "The Missing Axiom",
+  "version": 1,
+  "seed": 0,
+  "inputs": [],
+  "expected": [],
+  "notes": "Fill inputs/expected file lists with SHA256 hashes before production runs."
+}

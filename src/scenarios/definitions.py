@@ -153,5 +153,153 @@ SCENARIOS: List[Scenario] = [
         "ground_truth_goal": "A populated database, working API, and a verification script that returns True.",
         "golden_path": [],
         "perturbations": []
+    }),
+    Scenario(**{
+        "id": "archive_impossible_dates",
+        "name": "Archive of Impossible Dates",
+        "initial_prompt": (
+            "TASK: Normalize mixed-calendar historical records from 'timeline_events.csv' into a canonical timeline "
+            "and write 'timeline.csv' with columns: event_id, event_name, normalized_day. "
+            "You must preserve dependency order from 'dependencies.csv'. "
+            "Use 'active_calendar_offsets.json' as the conversion source of truth. BEGIN."
+        ),
+        "description": "Timeline normalization with a calendar-offset shock mid-run.",
+        "ground_truth_goal": "timeline.csv must match canonical normalized day values and dependency ordering.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: Calendar rules updated. Recompute timeline using the latest active calendar offsets and regenerate timeline.csv."}
+        ]
+    }),
+    Scenario(**{
+        "id": "museum_renamed_species",
+        "name": "Museum of Renamed Species",
+        "initial_prompt": (
+            "TASK: Build 'specimen_labels.csv' from 'specimens.csv' using taxonomy mapping in 'active_taxonomy.json'. "
+            "Apply specimen-specific overrides from 'taxonomy_exceptions.json'. "
+            "Output columns: specimen_id, species_label, region. BEGIN."
+        ),
+        "description": "Taxonomy remapping with exceptions under a mid-run rename update.",
+        "ground_truth_goal": "specimen_labels.csv matches active taxonomy and exception overrides exactly.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: Taxonomy has been revised. Use the updated active taxonomy and regenerate specimen_labels.csv."}
+        ]
+    }),
+    Scenario(**{
+        "id": "dream_court_transcript",
+        "name": "Dream Court Transcript",
+        "initial_prompt": (
+            "TASK: Compute verdicts from 'testimony.csv' using source trust weights from 'active_source_trust.json'. "
+            "Write 'verdict_matrix.csv' with columns: case_id, verdict, selected_citation. "
+            "Verdict must follow weighted SUPPORT vs OPPOSE evidence. BEGIN."
+        ),
+        "description": "Conflicting testimony resolution with trust reweighting shock.",
+        "ground_truth_goal": "verdict_matrix.csv matches deterministic trust-weighted verdict logic.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: One source is now unreliable. Recompute verdicts with the updated trust file and regenerate verdict_matrix.csv."}
+        ]
+    }),
+    Scenario(**{
+        "id": "lunar_cargo_ritual",
+        "name": "Lunar Cargo Ritual",
+        "initial_prompt": (
+            "TASK: Select a feasible, highest-value cargo set from 'cargo_items.csv' and write 'cargo_plan.json'. "
+            "Respect limits and forbidden pairs from 'active_constraints.json' and units from 'active_unit_profile.json'. "
+            "Include selected_items, total_mass_kg, total_volume_m3, and total_value. BEGIN."
+        ),
+        "description": "Constraint-satisfaction packing with unit and incompatibility shock.",
+        "ground_truth_goal": "cargo_plan.json must be optimal and feasible under active constraints.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: Unit profile and constraints changed. Re-optimize cargo selection and rewrite cargo_plan.json."}
+        ]
+    }),
+    Scenario(**{
+        "id": "paradox_lab_protocol",
+        "name": "Paradox Lab Protocol",
+        "initial_prompt": (
+            "TASK: Build a lab execution plan from 'protocol_steps.csv'. "
+            "Apply removals from 'active_lab_status.json' and substitutions from 'substitutions.json'. "
+            "Output 'protocol_plan.csv' (step_id,instrument,duration_min) and 'run_summary.json' "
+            "(total_duration_min,total_yield_points). BEGIN."
+        ),
+        "description": "Procedure synthesis with instrument removal shock.",
+        "ground_truth_goal": "Protocol plan and summary must match deterministic substitution logic.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: A critical instrument is removed. Update protocol plan and summary using active lab status."}
+        ]
+    }),
+    Scenario(**{
+        "id": "oracle_contract_amendment",
+        "name": "Oracle Contract Amendment",
+        "initial_prompt": (
+            "TASK: Evaluate charges in 'contracts.csv' using active pricing policy from 'active_rules.json'. "
+            "Write 'decisions.csv' with columns: contract_id, amount_due, applied_rate, discount, late_fee. BEGIN."
+        ),
+        "description": "Rule-engine style financial computation with retroactive amendment shock.",
+        "ground_truth_goal": "decisions.csv must match active rule policy arithmetic exactly.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: Superseding amendment activated. Recompute all decisions with updated active rules."}
+        ]
+    }),
+    Scenario(**{
+        "id": "city_duplicate_identities",
+        "name": "City of Duplicate Identities",
+        "initial_prompt": (
+            "TASK: Deduplicate 'citizen_records.csv' using keys from 'active_identity_policy.json' and write "
+            "'master_entities.csv' with columns: entity_id, record_ids, canonical_name, count. BEGIN."
+        ),
+        "description": "Entity resolution with key-policy shock.",
+        "ground_truth_goal": "master_entities.csv must match clustering induced by active identity keys.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: Identity key policy changed. Rebuild master_entities.csv under the new active policy."}
+        ]
+    }),
+    Scenario(**{
+        "id": "signal_mirror_logs",
+        "name": "Signal in the Mirror Logs",
+        "initial_prompt": (
+            "TASK: Reconstruct incident chains from 'primary_log.csv' and 'mirror_log.csv'. "
+            "Use ordering rule from 'active_ordering_policy.json'. "
+            "Write 'incidents.json' as a list of objects with incident_id, chain, event_count, root_event. BEGIN."
+        ),
+        "description": "Incident reconstruction under delayed/out-of-order mirror replay shock.",
+        "ground_truth_goal": "incidents.json must match deterministic merged-chain reconstruction.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: Ordering policy has changed. Reconstruct incidents with the updated active ordering rule."}
+        ]
+    }),
+    Scenario(**{
+        "id": "missing_axiom",
+        "name": "The Missing Axiom",
+        "initial_prompt": (
+            "TASK: Evaluate expressions from 'expressions.csv' using coefficients in 'active_axioms.json'. "
+            "Write 'transforms.json' with entries {expr_id, value}. BEGIN."
+        ),
+        "description": "Formula evaluation with axiom replacement shock.",
+        "ground_truth_goal": "transforms.json must match active coefficient rules exactly.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: One axiom was invalid. Recompute transforms using updated active axioms."}
+        ]
+    }),
+    Scenario(**{
+        "id": "bureau_contradictory_forms",
+        "name": "Bureau of Contradictory Forms",
+        "initial_prompt": (
+            "TASK: Normalize forms from 'forms.csv' using precedence in 'active_policy.json'. "
+            "Write 'canonical_records.csv' with columns: record_id, name, tax_id, address, source_policy. BEGIN."
+        ),
+        "description": "Authority-precedence normalization with policy shock.",
+        "ground_truth_goal": "canonical_records.csv must match active policy precedence output exactly.",
+        "golden_path": [],
+        "perturbations": [
+            {"step": 4, "type": "conflict", "instruction": "CHANGE: Authority precedence flipped. Regenerate canonical_records.csv under the updated policy."}
+        ]
     })
 ]

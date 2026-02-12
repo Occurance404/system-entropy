@@ -44,6 +44,10 @@ def build_manifest(
         "REQUEST_TOOLS",
         "REQUEST_LOGPROBS",
         "VALIDATION_FEEDBACK",
+        "AI_VERIFIER",
+        "AI_VERIFIER_INTERVAL",
+        "AI_VERIFIER_CONFIDENCE",
+        "AI_VERIFIER_FEEDBACK",
         "MAX_COMPLETION_TOKENS",
         "PROBE_MAX_TOKENS",
         "VLLM_BASE_URL",
@@ -55,6 +59,7 @@ def build_manifest(
         "SCR_EMBEDDING_DEVICE",
         "SCR_LOCAL_FILES_ONLY",
         "SCR_HASH_DIM",
+        "EXPERIMENT_SANDBOX_ROOT",
     ]
     env_snapshot = {k: os.getenv(k) for k in env_allowlist if os.getenv(k) is not None}
     return {

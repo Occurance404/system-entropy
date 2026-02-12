@@ -84,3 +84,14 @@ class ScriptedAgent(AgentWrapper):
             })
             
         return branches
+
+    def assess_completion(
+        self,
+        history: List[Dict],
+        scenario_id: str = "",
+        ground_truth_goal: str = "",
+        sandbox_path: str = "",
+        trigger: str = "periodic",
+    ) -> Dict[str, Any]:
+        # Mock agent has no real execution trace understanding; keep verifier conservative.
+        return {"verdict": "not_done", "confidence": 0.2, "reason": "ScriptedAgent verifier stub."}

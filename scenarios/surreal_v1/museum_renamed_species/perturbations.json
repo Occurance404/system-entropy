@@ -1,0 +1,7 @@
+[
+  {
+    "step": 4,
+    "type": "conflict",
+    "instruction": "CHANGE: Taxonomy patch deprecates old labels and introduces exception overrides for specific specimen IDs."
+  }
+]

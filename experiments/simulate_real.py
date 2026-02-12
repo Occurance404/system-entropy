@@ -14,15 +14,16 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from src.orchestrator.engine import Orchestrator
 from src.monitor.terminal_bench_monitor import get_monitor
 from src.agent.real_agent import OpenAICompatibleAgent 
+from src.shared.constants import LOGS_DIR
 
-def run_real_simulation(scenario_id: str, max_steps: int, cheap: bool = False):
+def run_real_simulation(scenario_id: str, max_steps: int, cheap: bool = False, stop_on_agent_done: bool = False) -> int:
     # Load environment variables from .env file
     config = dotenv_values(".env")
     
     # Check for configuration
-    api_key = config.get("VLLM_API_KEY")
-    base_url = config.get("VLLM_BASE_URL")
-    model_name = config.get("VLLM_MODEL_NAME", "deepseek-chat") 
+    api_key = os.getenv("VLLM_API_KEY") or config.get("VLLM_API_KEY")
+    base_url = os.getenv("VLLM_BASE_URL") or config.get("VLLM_BASE_URL")
+    model_name = os.getenv("VLLM_MODEL_NAME") or config.get("VLLM_MODEL_NAME", "deepseek-chat")
     
     if not api_key:
         print("ERROR: VLLM_API_KEY not set in .env file or environment.")
@@ -62,6 +63,7 @@ def run_real_simulation(scenario_id: str, max_steps: int, cheap: bool = False):
             metrics_monitor=tb_monitor,
             enable_validation=cheap,
             stop_on_success=cheap,
+            stop_on_agent_done=stop_on_agent_done,
             enable_branching_probes=not cheap,
         )
     except ValueError as e:
@@ -69,44 +71,53 @@ def run_real_simulation(scenario_id: str, max_steps: int, cheap: bool = False):
         sys.exit(1)
     
     # 3. Simulation Loop
-    for i in range(max_steps):
-        print(f"\n[Step {i+1}] Executing...")
-        
-        try:
-            # Run Orchestrator Step (logs internally via tb_monitor)
-            step_result_dict = orchestrator.step() 
+    fatal_error = None
+    try:
+        for i in range(max_steps):
+            print(f"\n[Step {i+1}] Executing...")
             
-            # Console Output
-            event_type = step_result_dict.get("event_type", "unknown")
-            print(f"  Event Type: {event_type}")
-            print(f"  Current Entropy: {step_result_dict.get('current_entropy', 'N/A')}")
-            
-            if event_type == 'perturbation_triggered':
-                scr = step_result_dict.get('scr')
-                print(f"  >>> PERTURBATION DETECTED! Triggering Branching Probe.")
-                if scr is None:
-                    print("  >>> Semantic Collapse Ratio (SCR): N/A (embeddings unavailable)")
-                else:
-                    print(f"  >>> Semantic Collapse Ratio (SCR): {scr:.4f}")
-            
-            if event_type == 'tool_execution':
-                print(f"  Tool: {step_result_dict.get('tool')}")
-                print(f"  IGE (Info Gain): {step_result_dict.get('ige', 'N/A')}")
-                print(f"  CBF (Code Bloat): {step_result_dict.get('cbf', 'N/A')}")
-                print(f"  RDI (Regressive Debt): {step_result_dict.get('rdi', 'N/A')}")
-            
-            if event_type == 'intervention':
-                print(f"  !!! INTERVENTION TRIGGERED !!!")
-                break 
-            if step_result_dict.get("task_complete") or event_type == "task_complete":
-                print("\n[TASK COMPLETE] Validator signaled success.")
-                break
+            try:
+                # Run Orchestrator Step (logs internally via tb_monitor)
+                step_result_dict = orchestrator.step() 
+                
+                # Console Output
+                event_type = step_result_dict.get("event_type", "unknown")
+                print(f"  Event Type: {event_type}")
+                print(f"  Current Entropy: {step_result_dict.get('current_entropy', 'N/A')}")
+                
+                if event_type == 'perturbation_triggered':
+                    scr = step_result_dict.get('scr')
+                    print(f"  >>> PERTURBATION DETECTED! Triggering Branching Probe.")
+                    if scr is None:
+                        print("  >>> Semantic Collapse Ratio (SCR): N/A (embeddings unavailable)")
+                    else:
+                        print(f"  >>> Semantic Collapse Ratio (SCR): {scr:.4f}")
+                
+                if event_type == 'tool_execution':
+                    print(f"  Tool: {step_result_dict.get('tool')}")
+                    print(f"  IGE (Info Gain): {step_result_dict.get('ige', 'N/A')}")
+                    print(f"  CBF (Code Bloat): {step_result_dict.get('cbf', 'N/A')}")
+                    print(f"  RDI (Regressive Debt): {step_result_dict.get('rdi', 'N/A')}")
+                
+                if event_type == 'intervention':
+                    print(f"  !!! INTERVENTION TRIGGERED !!!")
+                    break 
+                if step_result_dict.get("task_complete") or event_type == "task_complete":
+                    print("\n[TASK COMPLETE] Validator signaled success.")
+                    break
 
+            except Exception as e:
+                print(f"CRITICAL ERROR at Step {i+1}: {e}")
+                import traceback
+                traceback.print_exc()
+                fatal_error = e
+                break
+    finally:
+        try:
+            if getattr(orchestrator, "connector", None):
+                orchestrator.connector.stop()
         except Exception as e:
-            print(f"CRITICAL ERROR at Step {i+1}: {e}")
-            import traceback
-            traceback.print_exc()
-            break
+            print(f"WARNING: Failed to stop sandbox connector cleanly: {e}")
 
     # 4. Compute and Save Drift Summary
     print("\n--- Computing Drift Metrics ---")
@@ -117,14 +128,26 @@ def run_real_simulation(scenario_id: str, max_steps: int, cheap: bool = False):
     print(f"Summary saved to: {summary_file}")
     print(f"Max Drift: {summary['max_drift']:.4f}")
 
-    print(f"\n--- Simulation Complete. Logs in logs/terminal_bench/ ---")
+    if fatal_error is not None:
+        print(f"\n--- Simulation Failed (runtime error). Logs in {LOGS_DIR} ---")
+        return 2
+
+    print(f"\n--- Simulation Complete. Logs in {LOGS_DIR} ---")
+    return 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Entropic Stress-Test Simulation.")
     parser.add_argument("--scenario_id", type=str, default="drug_filter_shock", help="ID of the scenario to run (defined in src/scenarios/definitions.py)")
     parser.add_argument("--max_steps", type=int, default=10, help="Maximum number of steps to run the simulation")
     parser.add_argument("--cheap", action="store_true", help="Disable expensive probes and stop on validator success.")
+    parser.add_argument("--stop_on_agent_done", action="store_true", help="Stop when the agent explicitly signals completion.")
     
     args = parser.parse_args()
     
-    run_real_simulation(scenario_id=args.scenario_id, max_steps=args.max_steps, cheap=args.cheap)
+    exit_code = run_real_simulation(
+        scenario_id=args.scenario_id,
+        max_steps=args.max_steps,
+        cheap=args.cheap,
+        stop_on_agent_done=args.stop_on_agent_done,
+    )
+    raise SystemExit(exit_code)

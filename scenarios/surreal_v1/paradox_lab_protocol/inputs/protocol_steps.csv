@@ -1,0 +1,6 @@
+step_id,step_name,instrument,duration_min,yield_points,required
+P1,Sample Prep,SIFTER,5,4,1
+P2,Spectral Scan,SPECTROMETER,8,9,1
+P3,Thermal Fold,THERMAL_RING,6,5,1
+P4,Buffer Wash,WASH_BED,4,2,0
+P5,Crystal Lock,LOCK_PRESS,7,6,0

@@ -10,12 +10,13 @@ from src.orchestrator.engine import Orchestrator
 from src.agent.mock_agent import ScriptedAgent
 from src.services.metrics import EmbeddingMetricService
 from src.monitor.terminal_bench_monitor import get_monitor
+from src.shared.constants import LOGS_DIR
 
 def run_smoke_test():
     print("--- Starting Smoke Test ---")
     
     # Clean logs
-    log_dir = "logs/terminal_bench"
+    log_dir = LOGS_DIR
     if os.path.exists(log_dir):
         for f in glob.glob(f"{log_dir}/*.jsonl"):
             os.remove(f)

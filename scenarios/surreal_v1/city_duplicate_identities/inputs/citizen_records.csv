@@ -1,0 +1,7 @@
+record_id,full_name,dob,email,city
+1,Ana Bell,1990-01-10,ana@example.com,Delta
+2,Ana Bell,1990-01-10,ana@example.com,Delta
+3,Liam Cole,1988-03-02,liam@example.com,North
+4,Liam Cole,1988-03-02,shared@mesh.org,North
+5,Liam Cole,1988-03-02,shared@mesh.org,South
+6,Mina Dae,1995-07-21,mina@example.com,West

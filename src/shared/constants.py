@@ -1,11 +1,11 @@
 import os
 
 # Directory Paths
-DATA_DIR = "data"
-LOGS_ROOT = "logs"
-LOGS_DIR = os.path.join(LOGS_ROOT, "terminal_bench")
-RESULTS_DIR = os.path.join(DATA_DIR, "results")
-RUN_ARTIFACTS_DIR = os.path.join(DATA_DIR, "run_artifacts")
+DATA_DIR = os.getenv("EXPERIMENT_DATA_DIR", "data")
+LOGS_ROOT = os.getenv("EXPERIMENT_LOGS_ROOT", "logs")
+LOGS_DIR = os.getenv("EXPERIMENT_TB_LOG_DIR", os.path.join(LOGS_ROOT, "terminal_bench"))
+RESULTS_DIR = os.getenv("EXPERIMENT_RESULTS_DIR", os.path.join(DATA_DIR, "results"))
+RUN_ARTIFACTS_DIR = os.getenv("EXPERIMENT_RUN_ARTIFACTS_DIR", os.path.join(DATA_DIR, "run_artifacts"))
 
 # Shared logging fields
 LOG_SCHEMA = [
@@ -23,9 +23,12 @@ LOG_SCHEMA = [
     "tool",
     "compression_ratio",
     "task_complete",
+    "agent_done_claimed",
     "validation_passed",
     "validation_score",
     "validation_details",
+    "ai_verifier_verdict",
+    "ai_verifier_confidence",
     "prompt_tokens",
     "completion_tokens",
     "total_tokens",

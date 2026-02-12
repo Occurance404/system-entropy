@@ -10,15 +10,24 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from src.orchestrator.engine import Orchestrator
 from src.services.metrics import EmbeddingMetricService
 from src.agent.real_agent import OpenAICompatibleAgent
+from src.shared.constants import LOGS_ROOT
 
-def run_rescue_experiment(scenario_id: str, max_steps: int, enable_rescue: bool):
+def run_rescue_experiment(
+    scenario_id: str,
+    max_steps: int,
+    enable_rescue: bool,
+    enable_validation: bool,
+    stop_on_success: bool,
+    stop_on_agent_done: bool,
+    enable_branching_probes: bool = True,
+)-> int:
     # Load environment variables
     config = dotenv_values(".env")
     
-    api_key = config.get("VLLM_API_KEY")
-    base_url = config.get("VLLM_BASE_URL")
-    primary_model = config.get("VLLM_MODEL_NAME", "deepseek-chat") 
-    rescue_model = config.get("RESCUE_MODEL_NAME") 
+    api_key = os.getenv("VLLM_API_KEY") or config.get("VLLM_API_KEY")
+    base_url = os.getenv("VLLM_BASE_URL") or config.get("VLLM_BASE_URL")
+    primary_model = os.getenv("VLLM_MODEL_NAME") or config.get("VLLM_MODEL_NAME", "deepseek-chat")
+    rescue_model = os.getenv("RESCUE_MODEL_NAME") or config.get("RESCUE_MODEL_NAME")
     
     if not api_key:
         print("ERROR: VLLM_API_KEY not set.")
@@ -49,21 +58,29 @@ def run_rescue_experiment(scenario_id: str, max_steps: int, enable_rescue: bool)
             print("Initializing Rescue Agent...")
             rescue_agent = OpenAICompatibleAgent(
                 model_name=rescue_model,
-                base_url=config.get("RESCUE_BASE_URL", base_url),
-                api_key=config.get("RESCUE_API_KEY", api_key)
+                base_url=(os.getenv("RESCUE_BASE_URL") or config.get("RESCUE_BASE_URL", base_url)),
+                api_key=(os.getenv("RESCUE_API_KEY") or config.get("RESCUE_API_KEY", api_key))
             )
     except Exception as e:
         print(f"Failed to initialize Agents: {e}")
         sys.exit(1)
         
     try:
-        orchestrator = Orchestrator(scenario_id=scenario_id, agent=primary_agent, metric_service=metric_service)
+        orchestrator = Orchestrator(
+            scenario_id=scenario_id,
+            agent=primary_agent,
+            metric_service=metric_service,
+            enable_validation=enable_validation,
+            stop_on_success=stop_on_success,
+            stop_on_agent_done=stop_on_agent_done,
+            enable_branching_probes=enable_branching_probes,
+        )
     except ValueError as e:
         print(f"Error initializing Orchestrator: {e}")
         sys.exit(1)
     
     # 2. Setup Logging
-    log_dir = "logs/rescue"
+    log_dir = os.path.join(LOGS_ROOT, "rescue")
     os.makedirs(log_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     rescue_tag = "rescued" if enable_rescue else "baseline"
@@ -72,61 +89,104 @@ def run_rescue_experiment(scenario_id: str, max_steps: int, enable_rescue: bool)
     print(f"Logging to: {log_file}")
     
     rescued = False
-    
-    with open(log_file, "w") as f:
-        # 3. Simulation Loop
-        for i in range(max_steps):
-            print(f"\n[Step {i+1}] Executing...")
-            
-            try:
-                step_result_dict = orchestrator.step()
+    fatal_error = None
+    try:
+        with open(log_file, "w") as f:
+            # 3. Simulation Loop
+            for i in range(max_steps):
+                print(f"\n[Step {i+1}] Executing...")
                 
-                log_entry = {
-                    "timestamp": datetime.now().isoformat(),
-                    "step_index": step_result_dict.get("step_index", i + 1),
-                    "orchestrator_state": {
-                        "panic_counter": orchestrator.panic_counter,
-                        "current_agent": orchestrator.agent.model_name,
-                        "rescue_enabled": enable_rescue
-                    },
-                    "event_type": step_result_dict.get("event_type", "unknown"),
-                    "metrics": step_result_dict
-                }
-                
-                f.write(json.dumps(log_entry) + "\n")
-                f.flush()
-                
-                print(f"  Event Type: {log_entry['event_type']}")
-                
-                if log_entry['event_type'] == 'perturbation_triggered':
-                    print(f"  >>> PERTURBATION DETECTED! SCR: {log_entry['metrics'].get('scr', 'N/A')}")
-
-                if log_entry['event_type'] == 'intervention':
-                    print(f"  !!! PANIC DETECTED !!! Reason: {log_entry['metrics'].get('reason')}")
+                try:
+                    step_result_dict = orchestrator.step()
                     
-                    if enable_rescue:
-                        if not rescued:
-                            print(f"  >>> INITIATING RESCUE PROTOCOL: Switching to {rescue_model} <<<")
-                            orchestrator.switch_agent(rescue_agent)
-                            rescued = True
-                        else:
-                            print("  >>> Rescue already attempted. Simulation failing despite rescue.")
-                            break
-                    else:
-                        print("  >>> Rescue Disabled. Continuing with Primary Agent to observe collapse.")
+                    log_entry = {
+                        "timestamp": datetime.now().isoformat(),
+                        "step_index": step_result_dict.get("step_index", i + 1),
+                        "orchestrator_state": {
+                            "panic_counter": orchestrator.panic_counter,
+                            "current_agent": orchestrator.agent.model_name,
+                            "rescue_enabled": enable_rescue
+                        },
+                        "event_type": step_result_dict.get("event_type", "unknown"),
+                        "metrics": step_result_dict
+                    }
+                    
+                    f.write(json.dumps(log_entry) + "\n")
+                    f.flush()
+                    
+                    print(f"  Event Type: {log_entry['event_type']}")
+                    
+                    if log_entry['event_type'] == 'perturbation_triggered':
+                        print(f"  >>> PERTURBATION DETECTED! SCR: {log_entry['metrics'].get('scr', 'N/A')}")
 
-            except Exception as e:
-                print(f"CRITICAL ERROR at Step {i+1}: {e}")
-                break
+                    if log_entry['event_type'] == 'intervention':
+                        print(f"  !!! PANIC DETECTED !!! Reason: {log_entry['metrics'].get('reason')}")
+                        
+                        if enable_rescue:
+                            if not rescued:
+                                print(f"  >>> INITIATING RESCUE PROTOCOL: Switching to {rescue_model} <<<")
+                                orchestrator.switch_agent(rescue_agent)
+                                rescued = True
+                            else:
+                                print("  >>> Rescue already attempted. Simulation failing despite rescue.")
+                                break
+                        else:
+                            print("  >>> Rescue Disabled. Continuing with Primary Agent to observe collapse.")
+
+                    if step_result_dict.get("task_complete") or log_entry["event_type"] == "task_complete":
+                        print("  [EARLY STOP] Task completion detected.")
+                        break
+
+                except Exception as e:
+                    print(f"CRITICAL ERROR at Step {i+1}: {e}")
+                    fatal_error = e
+                    break
+    finally:
+        try:
+            if getattr(orchestrator, "connector", None):
+                orchestrator.connector.stop()
+        except Exception as e:
+            print(f"WARNING: Failed to stop sandbox connector cleanly: {e}")
+
+    if fatal_error is not None:
+        print(f"\n--- Experiment Failed (runtime error). Check {log_file} ---")
+        return 2
 
     print(f"\n--- Experiment Complete. Check {log_file} ---")
+    return 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Entropic Stress-Test Rescue Experiment.")
     parser.add_argument("--scenario_id", type=str, default="drug_filter_shock", help="ID of the scenario")
     parser.add_argument("--max_steps", type=int, default=15, help="Max steps")
     parser.add_argument("--enable_rescue", action="store_true", help="Enable the Rescue Agent protocol.")
+    parser.add_argument("--enable_validation", action="store_true", help="Run scenario validator each step.")
+    parser.add_argument("--stop_on_success", action="store_true", help="Stop when validator passes.")
+    parser.add_argument("--stop_on_agent_done", action="store_true", help="Stop when agent explicitly signals completion.")
+    parser.add_argument("--disable_probes", action="store_true", help="Disable branching probes to reduce API overhead.")
+    parser.add_argument(
+        "--cheap",
+        action="store_true",
+        help="Fair/cheap mode: enables validation+early stop and disables probes.",
+    )
     
     args = parser.parse_args()
+
+    enable_validation = args.enable_validation
+    stop_on_success = args.stop_on_success
+    enable_branching_probes = not args.disable_probes
+    if args.cheap:
+        enable_validation = True
+        stop_on_success = True
+        enable_branching_probes = False
     
-    run_rescue_experiment(scenario_id=args.scenario_id, max_steps=args.max_steps, enable_rescue=args.enable_rescue)
+    exit_code = run_rescue_experiment(
+        scenario_id=args.scenario_id,
+        max_steps=args.max_steps,
+        enable_rescue=args.enable_rescue,
+        enable_validation=enable_validation,
+        stop_on_success=stop_on_success,
+        stop_on_agent_done=args.stop_on_agent_done,
+        enable_branching_probes=enable_branching_probes,
+    )
+    raise SystemExit(exit_code)

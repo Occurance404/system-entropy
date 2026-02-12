@@ -1,0 +1,4 @@
+{
+  "tax_precedence": "vendor",
+  "address_precedence": "vendor"
+}

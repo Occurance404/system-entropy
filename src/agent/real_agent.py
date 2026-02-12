@@ -1,11 +1,28 @@
 import os
 import json
-import math
 import asyncio
 import time
+import threading
 from typing import List, Dict, Any, Optional
 from openai import OpenAI, AsyncOpenAI, APIConnectionError, RateLimitError, APIError
-from json import JSONDecodeError
+from src.agent.message_utils import (
+    build_dynamic_execution_guidance,
+    coerce_tool_args,
+    content_to_text,
+    extract_first_json_object,
+    normalize_text_tool_call,
+    normalize_tool_name,
+    parse_tool_arguments,
+)
+from src.agent.protocol_config import (
+    KNOWN_TOOLS,
+    TOOL_NAME_ALIASES,
+    build_completion_verifier_system_message,
+    build_probe_system_message,
+    build_system_message,
+    build_text_tools_system_message,
+    build_tools_schema,
+)
 from src.agent.wrapper import AgentWrapper
 
 def retry_request(max_retries=3, backoff_factor=2):
@@ -40,6 +57,9 @@ class OpenAICompatibleAgent(AgentWrapper):
     Connects to a remote server to generate text and logprobs.
     Includes Async Acceleration for Branching Probes.
     """
+
+    _KNOWN_TOOLS = KNOWN_TOOLS
+    _TOOL_NAME_ALIASES = TOOL_NAME_ALIASES
     
     def __init__(self, model_name: str, base_url: str = None, api_key: str = None, temperature: float = 0.7):
         super().__init__(model_name, temperature)
@@ -81,120 +101,11 @@ class OpenAICompatibleAgent(AgentWrapper):
         except Exception:
             self.probe_max_tokens = 192
         
-        # Define a clear system message to orient the agent as a task executor
-        self.system_message = {
-            "role": "system",
-            "content": "You are an autonomous AI agent designed to execute tasks by using available tools and responding directly with actions or answers. Your goal is to complete the given task efficiently and accurately. Do not engage in conversational chitchat or ask for clarification unless absolutely necessary for task execution. If you need to perform an action, use the tool functions provided. If the task is complete, provide a final summary."
-        }
-
-        # Text-based tool calling fallback (for providers that reject the `tools` parameter).
-        self.text_tools_system_message = {
-            "role": "system",
-            "content": (
-                "You are an autonomous AI agent in an environment where tools exist, but native function calling may be unavailable.\n"
-                "\n"
-                "When you want to use a tool, respond with ONLY a single JSON object in one of these two forms:\n"
-                '1) Tool call:\n{"type":"tool_use","tool":"<tool_name>","content":{...tool_args...}}\n'
-                '2) Final answer:\n{"type":"llm_reply","content":"..."}\n'
-                "\n"
-                "Rules:\n"
-                "- Output ONLY JSON (no markdown, no backticks, no extra keys).\n"
-                "- Use exactly one tool call at a time.\n"
-                "\n"
-                "Available tools:\n"
-                "- read_file: {path (string), mode (auto|full|outline, optional), start_line (int, optional), end_line (int, optional), with_line_numbers (bool, optional)}\n"
-                "- write_file: {path (string), content (string)}\n"
-                "- execute_python: {script_path (string)}\n"
-                "- run_shell: {command (string)}\n"
-                "- search_web: {query (string)}\n"
-            ),
-        }
-
-        # Probe message: branching probes should produce "thoughts" (not tool calls) for SCR.
-        self.probe_system_message = {
-            "role": "system",
-            "content": (
-                "You are running an internal probe to assess plan stability.\n"
-                "Do NOT call tools. Output a short, high-level next-step plan (1-3 sentences)."
-            ),
-        }
-        
-        self.tools_schema = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "read_file",
-                    "description": "Reads a file from the filesystem.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "path": {"type": "string"},
-                            "mode": {
-                                "type": "string",
-                                "description": "auto (default), full, or outline",
-                                "enum": ["auto", "full", "outline"]
-                            },
-                            "start_line": {"type": "integer", "minimum": 1},
-                            "end_line": {"type": "integer", "minimum": 1},
-                            "with_line_numbers": {"type": "boolean"}
-                        },
-                        "required": ["path"],
-                        "additionalProperties": False
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "write_file",
-                    "description": "Writes content to a file.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "path": {"type": "string"},
-                            "content": {"type": "string"}
-                        },
-                        "required": ["path", "content"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "execute_python",
-                    "description": "Executes a python script.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {"script_path": {"type": "string"}},
-                        "required": ["script_path"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_web",
-                    "description": "Searches the web.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {"query": {"type": "string"}},
-                        "required": ["query"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "run_shell",
-                    "description": "Executes a shell command in the sandbox. Use this for navigating directories, running tests, or managing files.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {"command": {"type": "string"}},
-                        "required": ["command"]
-                    }
-                }
-            }
-        ]
+        self.system_message = build_system_message()
+        self.text_tools_system_message = build_text_tools_system_message()
+        self.probe_system_message = build_probe_system_message()
+        self.completion_verifier_system_message = build_completion_verifier_system_message()
+        self.tools_schema = build_tools_schema()
 
     def _should_request_logprobs(self) -> bool:
         mode = (self.logprobs_mode or "auto").strip().lower()
@@ -228,78 +139,34 @@ class OpenAICompatibleAgent(AgentWrapper):
             return True
         return False
 
+    def _normalize_tool_name(self, tool_name: Any) -> Optional[str]:
+        return normalize_tool_name(
+            tool_name,
+            known_tools=self._KNOWN_TOOLS,
+            aliases=self._TOOL_NAME_ALIASES,
+        )
+
+    def _coerce_tool_args(self, tool_name: str, args: Any) -> Optional[Dict[str, Any]]:
+        return coerce_tool_args(tool_name, args)
+
+    def _parse_tool_arguments(self, raw_arguments: Any, tool_name: str) -> Optional[Dict[str, Any]]:
+        return parse_tool_arguments(raw_arguments, tool_name)
+
     def _normalize_text_tool_call(self, obj: Any) -> Optional[Dict[str, Any]]:
-        if not isinstance(obj, dict):
-            return None
+        return normalize_text_tool_call(
+            obj,
+            known_tools=self._KNOWN_TOOLS,
+            aliases=self._TOOL_NAME_ALIASES,
+        )
 
-        raw_type = obj.get("type") or obj.get("action") or obj.get("kind")
-        if isinstance(raw_type, str):
-            raw_type = raw_type.strip().lower()
-
-        # Common key variants for tool name + arguments.
-        tool_name = obj.get("tool") or obj.get("name") or obj.get("function")
-        args = obj.get("content")
-        if args is None:
-            args = obj.get("args") or obj.get("arguments") or obj.get("parameters")
-
-        if tool_name is not None:
-            tool_name = str(tool_name).strip()
-
-        if raw_type in ("tool_use", "tool", "function_call", "call_tool") or (tool_name and raw_type not in ("llm_reply", "final", "answer")):
-            if not tool_name:
-                return None
-            if args is None:
-                args = {}
-            if not isinstance(args, dict):
-                # Best-effort: some models may emit args as a JSON string
-                if isinstance(args, str):
-                    # Common shorthand: args as a single string for single-parameter tools.
-                    if tool_name == "run_shell":
-                        return {"type": "tool_use", "tool": tool_name, "content": {"command": args}}
-                    if tool_name == "read_file":
-                        return {"type": "tool_use", "tool": tool_name, "content": {"path": args}}
-                    if tool_name == "execute_python":
-                        return {"type": "tool_use", "tool": tool_name, "content": {"script_path": args}}
-                    if tool_name == "search_web":
-                        return {"type": "tool_use", "tool": tool_name, "content": {"query": args}}
-                    try:
-                        parsed = json.loads(args)
-                        if isinstance(parsed, dict):
-                            args = parsed
-                    except Exception:
-                        return None
-                else:
-                    return None
-            return {"type": "tool_use", "tool": tool_name, "content": args}
-
-        if raw_type in ("llm_reply", "final", "answer"):
-            content = obj.get("content") or obj.get("answer") or obj.get("final")
-            if content is None:
-                content = ""
-            return {"type": "llm_reply", "content": str(content)}
-
-        return None
+    def _content_to_text(self, content: Any) -> str:
+        return content_to_text(content)
 
     def _extract_first_json_object(self, text: str) -> Optional[Any]:
-        if not isinstance(text, str) or not text.strip():
-            return None
+        return extract_first_json_object(text)
 
-        stripped = text.strip()
-        try:
-            return json.loads(stripped)
-        except Exception:
-            pass
-
-        decoder = json.JSONDecoder()
-        for i, ch in enumerate(stripped):
-            if ch not in "{[":
-                continue
-            try:
-                obj, _ = decoder.raw_decode(stripped[i:])
-                return obj
-            except Exception:
-                continue
-        return None
+    def _build_dynamic_execution_guidance(self, history: List[Dict]) -> Optional[Dict[str, str]]:
+        return build_dynamic_execution_guidance(history)
 
     @retry_request(max_retries=3)
     def get_next_action(self, history: List[Dict]) -> Dict[str, Any]:
@@ -309,6 +176,9 @@ class OpenAICompatibleAgent(AgentWrapper):
         request_tools = self._should_request_tools()
         system_message = self.system_message if request_tools else self.text_tools_system_message
         messages = [system_message]
+        dynamic_hint = self._build_dynamic_execution_guidance(history)
+        if dynamic_hint is not None:
+            messages.append(dynamic_hint)
         for msg in history:
             role = msg["role"]
             content = msg["content"]
@@ -412,27 +282,34 @@ class OpenAICompatibleAgent(AgentWrapper):
 
             if getattr(message, "tool_calls", None):
                 tool_call = message.tool_calls[0]
-                try:
-                    tool_args = json.loads(tool_call.function.arguments)
-                except JSONDecodeError as e:
-                    print(f"JSONDecodeError when parsing tool arguments: {e}. Raw arguments: {tool_call.function.arguments}")
+                tool_name = self._normalize_tool_name(getattr(tool_call.function, "name", None))
+                if not tool_name:
                     return {
                         "type": "llm_reply",
-                        "content": f"Error: Failed to parse tool arguments as JSON. Malformed JSON: {tool_call.function.arguments[:100]}...",
-                        # Logprobs are unavailable for this error path; treat entropy as missing (None).
-                        "logprobs": []
+                        "content": "Error: Model returned a tool call without a valid tool name.",
+                        "logprobs": [],
+                    }
+                tool_args = self._parse_tool_arguments(getattr(tool_call.function, "arguments", ""), tool_name)
+                if tool_args is None:
+                    raw_args = str(getattr(tool_call.function, "arguments", ""))[:180]
+                    print(f"Tool argument parsing failed for tool={tool_name}. Raw={raw_args}")
+                    return {
+                        "type": "llm_reply",
+                        "content": f"Error: Failed to parse tool arguments for tool '{tool_name}'.",
+                        "logprobs": [],
                     }
                 return {
                     "type": "tool_use",
-                    "tool": tool_call.function.name,
+                    "tool": tool_name,
                     "content": tool_args,
                     "logprobs": token_logprobs,
                     "usage": usage,
                 }
             else:
                 # Text-tools fallback (no native tool_calls).
-                if isinstance(message.content, str):
-                    extracted = self._extract_first_json_object(message.content)
+                content_text = self._content_to_text(getattr(message, "content", ""))
+                if content_text:
+                    extracted = self._extract_first_json_object(content_text)
                     normalized = self._normalize_text_tool_call(extracted)
                     if normalized and normalized.get("type") == "tool_use":
                         normalized["logprobs"] = token_logprobs
@@ -445,7 +322,7 @@ class OpenAICompatibleAgent(AgentWrapper):
 
                 return {
                     "type": "llm_reply",
-                    "content": message.content,
+                    "content": content_text,
                     "logprobs": token_logprobs,
                     "usage": usage,
                 }
@@ -469,35 +346,25 @@ class OpenAICompatibleAgent(AgentWrapper):
             loop = None
 
         if loop and loop.is_running():
-            # We are already in an event loop, use a future to block safely
-            # Note: This is tricky in sync code. We might need nest_asyncio or just run_until_complete if we were the owner.
-            # But since this function signature is SYNC, and we are called from SYNC Orchestrator,
-            # The only case we have a loop is if the Orchestrator itself was wrapped in a loop.
-            # We can use new_event_loop() in a separate thread, or just accept the limitation.
-            # For now, let's assume if there is a loop, we must use it.
-            print("Agent Warning: Existing event loop detected. Using it to run async probe.")
-            future = asyncio.ensure_future(self._generate_multiple_async(history, n))
-            # We cannot await 'future' here because we are sync.
-            # This is the "Sync-Async Bridge" problem.
-            # Solution: Use a separate thread to run the async loop if the main thread is blocked?
-            # Or simpler: Just run it. 
-            # If we are here, likely the user is running `python experiments/simulate.py` which is sync.
-            # So `asyncio.run` implies NO loop.
-            # If there IS a loop (e.g. FastAPI), `asyncio.run` fails.
-            pass
-        
-        # Robust implementation:
-        try:
-            return asyncio.run(self._generate_multiple_async(history, n))
-        except RuntimeError as e:
-            if "event loop" in str(e):
-                # Fallback: We are in a loop (e.g. Notebook or API).
-                # We can try to use the current loop
-                import nest_asyncio
-                nest_asyncio.apply()
-                return asyncio.run(self._generate_multiple_async(history, n))
-            else:
-                raise e
+            return self._run_async_in_worker_thread(history, n)
+        return asyncio.run(self._generate_multiple_async(history, n))
+
+    def _run_async_in_worker_thread(self, history: List[Dict], n: int) -> List[Dict[str, Any]]:
+        result: Dict[str, Any] = {"branches": [], "error": None}
+
+        def _runner() -> None:
+            try:
+                result["branches"] = asyncio.run(self._generate_multiple_async(history, n))
+            except Exception as e:
+                result["error"] = e
+
+        thread = threading.Thread(target=_runner, daemon=True)
+        thread.start()
+        thread.join()
+
+        if result["error"] is not None:
+            raise result["error"]
+        return result["branches"]
 
     async def _generate_multiple_async(self, history: List[Dict], n: int) -> List[Dict[str, Any]]:
 
@@ -544,19 +411,55 @@ class OpenAICompatibleAgent(AgentWrapper):
                 kwargs["logprobs"] = True
                 kwargs["top_logprobs"] = 1
 
-            try:
-                response = await self.async_client.chat.completions.create(**kwargs)
-            except Exception as e:
-                if request_logprobs and (self.logprobs_mode or "auto").strip().lower() == "auto" and self._looks_like_logprobs_unsupported(e):
-                    self._logprobs_supported = False
-                    kwargs.pop("logprobs", None)
-                    kwargs.pop("top_logprobs", None)
+            response = None
+            attempts = 0
+            while attempts < 3:
+                attempts += 1
+                try:
                     response = await self.async_client.chat.completions.create(**kwargs)
-                else:
+                    break
+                except Exception as e:
+                    if (
+                        request_logprobs
+                        and (self.logprobs_mode or "auto").strip().lower() == "auto"
+                        and self._looks_like_logprobs_unsupported(e)
+                    ):
+                        self._logprobs_supported = False
+                        request_logprobs = False
+                        kwargs.pop("logprobs", None)
+                        kwargs.pop("top_logprobs", None)
+                        continue
+                    if isinstance(e, (APIConnectionError, RateLimitError, APIError)) and attempts < 3:
+                        await asyncio.sleep(2 ** attempts)
+                        continue
                     raise
+
+            if response is None:
+                raise RuntimeError("Probe request failed after retries.")
             
             choice = response.choices[0]
-            content = choice.message.content
+            message = choice.message
+            content = self._content_to_text(getattr(message, "content", ""))
+            if not content.strip():
+                # Some providers return probe outputs as tool-calls with empty text.
+                tool_calls = getattr(message, "tool_calls", None)
+                if tool_calls:
+                    call_summaries: List[str] = []
+                    for tc in tool_calls:
+                        fn = getattr(tc, "function", None)
+                        name = getattr(fn, "name", "") if fn is not None else ""
+                        args = getattr(fn, "arguments", "") if fn is not None else ""
+                        payload = {"tool": str(name)}
+                        if args:
+                            payload["args"] = str(args)
+                        call_summaries.append(json.dumps(payload, ensure_ascii=True))
+                    content = "\n".join(call_summaries).strip()
+
+            if not content.strip():
+                # Fallback for providers that expose reasoning separate from message.content.
+                reasoning = getattr(message, "reasoning", None)
+                if reasoning:
+                    content = self._content_to_text(reasoning)
             token_logprobs = []
             if choice.logprobs and choice.logprobs.content:
                 token_logprobs = [token.logprob for token in choice.logprobs.content]
@@ -581,3 +484,68 @@ class OpenAICompatibleAgent(AgentWrapper):
         except Exception as e:
             print(f"Error in async probe {index+1}/{total}: {e}")
             return None
+
+    def assess_completion(
+        self,
+        history: List[Dict],
+        scenario_id: str = "",
+        ground_truth_goal: str = "",
+        sandbox_path: str = "",
+        trigger: str = "periodic",
+    ) -> Dict[str, Any]:
+        """
+        Independent completion verifier call.
+        Returns: {"verdict": "done|not_done|uncertain", "confidence": float, "reason": str}
+        """
+        compact_history = []
+        for msg in history[-30:]:
+            role = str(msg.get("role", "unknown"))
+            content = self._content_to_text(msg.get("content", ""))
+            if len(content) > 500:
+                content = content[:500] + "... <truncated>"
+            compact_history.append({"role": role, "content": content})
+
+        verifier_payload = {
+            "scenario_id": scenario_id,
+            "ground_truth_goal": ground_truth_goal,
+            "sandbox_path": sandbox_path,
+            "trigger": trigger,
+            "recent_history": compact_history,
+        }
+
+        messages = [
+            self.completion_verifier_system_message,
+            {"role": "user", "content": json.dumps(verifier_payload, ensure_ascii=False)},
+        ]
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=0.0,
+                max_tokens=220,
+            )
+            choice = response.choices[0]
+            content_text = self._content_to_text(getattr(choice.message, "content", ""))
+            parsed = self._extract_first_json_object(content_text)
+            if not isinstance(parsed, dict):
+                lowered = content_text.lower()
+                if "not_done" in lowered:
+                    parsed = {"verdict": "not_done", "confidence": 0.5, "reason": content_text[:220]}
+                elif "\"done\"" in lowered or "verdict: done" in lowered:
+                    parsed = {"verdict": "done", "confidence": 0.5, "reason": content_text[:220]}
+                else:
+                    parsed = {"verdict": "uncertain", "confidence": 0.0, "reason": content_text[:220]}
+
+            verdict = str(parsed.get("verdict", "uncertain")).strip().lower()
+            if verdict not in ("done", "not_done", "uncertain"):
+                verdict = "uncertain"
+            try:
+                confidence = float(parsed.get("confidence", 0.0))
+            except Exception:
+                confidence = 0.0
+            confidence = min(1.0, max(0.0, confidence))
+            reason = str(parsed.get("reason", "")).strip() or "no reason provided"
+            return {"verdict": verdict, "confidence": confidence, "reason": reason}
+        except Exception as e:
+            return {"verdict": "uncertain", "confidence": 0.0, "reason": f"verifier_error: {e}"}

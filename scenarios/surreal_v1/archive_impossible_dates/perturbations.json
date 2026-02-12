@@ -1,0 +1,7 @@
+[
+  {
+    "step": 4,
+    "type": "conflict",
+    "instruction": "CHANGE: Calendar standard has changed; convert all prior records into the new canonical calendar before finalizing timeline.csv."
+  }
+]

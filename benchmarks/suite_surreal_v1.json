@@ -1,0 +1,16 @@
+{
+  "suite_id": "surreal_v1",
+  "description": "Surreal reasoning-heavy scenario scaffold suite.",
+  "scenarios": [
+    {"scenario_id": "archive_impossible_dates", "max_steps": 80},
+    {"scenario_id": "museum_renamed_species", "max_steps": 80},
+    {"scenario_id": "dream_court_transcript", "max_steps": 80},
+    {"scenario_id": "lunar_cargo_ritual", "max_steps": 90},
+    {"scenario_id": "paradox_lab_protocol", "max_steps": 90},
+    {"scenario_id": "oracle_contract_amendment", "max_steps": 100},
+    {"scenario_id": "city_duplicate_identities", "max_steps": 90},
+    {"scenario_id": "signal_mirror_logs", "max_steps": 90},
+    {"scenario_id": "missing_axiom", "max_steps": 100},
+    {"scenario_id": "bureau_contradictory_forms", "max_steps": 90}
+  ]
+}

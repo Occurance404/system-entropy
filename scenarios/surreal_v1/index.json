@@ -1,0 +1,16 @@
+{
+  "pack_id": "surreal_v1",
+  "description": "Surreal, reasoning-heavy scenarios with deterministic validators.",
+  "scenarios": [
+    {"id": "archive_impossible_dates", "title": "Archive of Impossible Dates"},
+    {"id": "museum_renamed_species", "title": "Museum of Renamed Species"},
+    {"id": "dream_court_transcript", "title": "Dream Court Transcript"},
+    {"id": "lunar_cargo_ritual", "title": "Lunar Cargo Ritual"},
+    {"id": "paradox_lab_protocol", "title": "Paradox Lab Protocol"},
+    {"id": "oracle_contract_amendment", "title": "Oracle Contract Amendment"},
+    {"id": "city_duplicate_identities", "title": "City of Duplicate Identities"},
+    {"id": "signal_mirror_logs", "title": "Signal in the Mirror Logs"},
+    {"id": "missing_axiom", "title": "The Missing Axiom"},
+    {"id": "bureau_contradictory_forms", "title": "Bureau of Contradictory Forms"}
+  ]
+}

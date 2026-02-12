@@ -1,0 +1,223 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="950" viewBox="0 0 1400 950">
+  <defs>
+    <style>
+      .zone { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 1; rx: 12; }
+      .zone-header { font: 700 13px Inter, system-ui, sans-serif; fill: #64748b; letter-spacing: 0.5px; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; rx: 6; }
+      .box-new { fill: #ecfdf5; stroke: #10b981; stroke-width: 2; rx: 6; }
+      .title { font: 700 20px Inter, system-ui, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 12px Inter, system-ui, sans-serif; fill: #64748b; }
+      .label { font: 600 13px Inter, system-ui, sans-serif; fill: #1e293b; }
+      .label-new { font: 600 13px Inter, system-ui, sans-serif; fill: #047857; }
+      .text { font: 400 11px Inter, system-ui, sans-serif; fill: #475569; }
+      .badge { font: 700 9px Inter, system-ui, sans-serif; fill: white; }
+      .badge-bg { fill: #10b981; rx: 3; }
+      .arrow { stroke: #94a3b8; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .arrow-recovery { stroke: #ef4444; stroke-width: 2; stroke-dasharray: 6 3; fill: none; marker-end: url(#arrowRed); }
+      .flow-label { font: 500 10px Inter, system-ui, sans-serif; fill: #64748b; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="40" y="35" class="title">Context-Aware Autonomous Developer (V3)</text>
+  <text x="40" y="55" class="subtitle">Green boxes = New components  |  Red dashed = Recovery paths</text>
+
+  <!-- ===== ZONE 1: INFRASTRUCTURE ===== -->
+  <rect x="30" y="75" width="300" height="860" class="zone"/>
+  <text x="50" y="100" class="zone-header">INFRASTRUCTURE</text>
+
+  <!-- Orchestrator -->
+  <rect x="50" y="120" width="260" height="80" class="box"/>
+  <text x="70" y="145" class="label">Orchestrator</text>
+  <text x="70" y="165" class="text">State machine, loop control</text>
+  <text x="70" y="180" class="text">Recovery policy routing</text>
+
+  <!-- Memory -->
+  <rect x="50" y="215" width="260" height="60" class="box"/>
+  <text x="70" y="240" class="label">Memory Store</text>
+  <text x="70" y="258" class="text">STATE.json + EVENTS.jsonl</text>
+
+  <!-- Action Classifier (NEW) -->
+  <rect x="50" y="290" width="260" height="80" class="box-new"/>
+  <rect x="50" y="290" width="32" height="14" class="badge-bg"/>
+  <text x="56" y="300" class="badge">NEW</text>
+  <text x="70" y="325" class="label-new">Action Classifier</text>
+  <text x="70" y="343" class="text">Detects: EDITED | REASONED | FAILED | LOOPED</text>
+  <text x="70" y="358" class="text">Catches transition failures</text>
+
+  <!-- Graduated Recovery (NEW) -->
+  <rect x="50" y="385" width="260" height="110" class="box-new"/>
+  <rect x="50" y="385" width="32" height="14" class="badge-bg"/>
+  <text x="56" y="395" class="badge">NEW</text>
+  <text x="70" y="420" class="label-new">Graduated Recovery</text>
+  <text x="70" y="440" class="text">L1: Prune stale outputs</text>
+  <text x="70" y="455" class="text">L2: Summarize old reasoning</text>
+  <text x="70" y="470" class="text">L3: Context wipe</text>
+  <text x="70" y="485" class="text">L4: Driver swap | L5: Git rollback</text>
+
+  <!-- Observer -->
+  <rect x="50" y="510" width="260" height="60" class="box"/>
+  <text x="70" y="535" class="label">Observer</text>
+  <text x="70" y="553" class="text">Captures diffs + stdout/stderr</text>
+
+  <!-- Git Checkpoint -->
+  <rect x="50" y="585" width="260" height="60" class="box"/>
+  <text x="70" y="610" class="label">Git Checkpoint Manager</text>
+  <text x="70" y="628" class="text">snapshot() / rollback(n)</text>
+
+  <!-- ===== ZONE 2: CONTEXT ENGINE ===== -->
+  <rect x="350" y="75" width="300" height="860" class="zone"/>
+  <text x="370" y="100" class="zone-header">CONTEXT ENGINE</text>
+
+  <!-- Context Builder -->
+  <rect x="370" y="120" width="260" height="60" class="box"/>
+  <text x="390" y="145" class="label">Context Builder</text>
+  <text x="390" y="163" class="text">Compiles prioritized Context Pack</text>
+
+  <!-- Token Budget (NEW) -->
+  <rect x="370" y="195" width="260" height="80" class="box-new"/>
+  <rect x="370" y="195" width="32" height="14" class="badge-bg"/>
+  <text x="376" y="205" class="badge">NEW</text>
+  <text x="390" y="230" class="label-new">Token Budget Manager</text>
+  <text x="390" y="248" class="text">Budgeted context (configurable), priority allocation</text>
+  <text x="390" y="263" class="text">Error &gt; Stack &gt; Imports &gt; Grep</text>
+
+  <!-- Hard References -->
+  <rect x="370" y="290" width="260" height="80" class="box" style="stroke-width: 2.5; stroke: #475569;"/>
+  <text x="390" y="315" class="label">Hard References (P1-P3)</text>
+  <text x="390" y="333" class="text">Stack traces, git diff</text>
+  <text x="390" y="348" class="text">Import graph, symbol defs</text>
+  <text x="390" y="363" class="text" style="font-weight: 600;">Never dropped (bounded)</text>
+
+  <!-- Soft References -->
+  <rect x="370" y="385" width="260" height="60" class="box" style="stroke-dasharray: 4 3;"/>
+  <text x="390" y="410" class="label">Soft References (P4-P5)</text>
+  <text x="390" y="428" class="text">Lexical search, embeddings (fallback)</text>
+
+  <!-- Multi-File Coherence (NEW) -->
+  <rect x="370" y="460" width="260" height="70" class="box-new"/>
+  <rect x="370" y="460" width="32" height="14" class="badge-bg"/>
+  <text x="376" y="470" class="badge">NEW</text>
+  <text x="390" y="495" class="label-new">Multi-File Coherence</text>
+  <text x="390" y="513" class="text">Cross-file dependency tracking</text>
+
+  <!-- Semantic Drift (NEW) -->
+  <rect x="370" y="545" width="260" height="70" class="box-new"/>
+  <rect x="370" y="545" width="32" height="14" class="badge-bg"/>
+  <text x="376" y="555" class="badge">NEW</text>
+  <text x="390" y="580" class="label-new">Semantic Drift Detector</text>
+  <text x="390" y="598" class="text">Logic inversions (&gt; vs &lt;, AND/OR)</text>
+
+  <!-- ===== ZONE 3: EXECUTION ===== -->
+  <rect x="670" y="75" width="300" height="400" class="zone"/>
+  <text x="690" y="100" class="zone-header">EXECUTION</text>
+
+  <!-- Agent Driver -->
+  <rect x="690" y="120" width="260" height="80" class="box"/>
+  <text x="710" y="145" class="label">Agent Driver (Swappable)</text>
+  <text x="710" y="165" class="text">Primary: DeepSeek / Codex</text>
+  <text x="710" y="183" class="text">Rescue: GPT-4 / Claude</text>
+
+  <!-- Sandbox -->
+  <rect x="690" y="215" width="260" height="100" class="box"/>
+  <text x="710" y="240" class="label">Sandbox Workspace</text>
+  <text x="710" y="260" class="text">Docker or local sandbox</text>
+  <text x="710" y="278" class="text">Git-tracked filesystem</text>
+  <text x="710" y="296" class="text">Auto-commit per step</text>
+
+  <!-- ===== ZONE 4: VALIDATION ===== -->
+  <rect x="990" y="75" width="380" height="600" class="zone"/>
+  <text x="1010" y="100" class="zone-header">VALIDATION LAYER</text>
+
+  <!-- Lazy Validator -->
+  <rect x="1010" y="120" width="340" height="70" class="box"/>
+  <text x="1030" y="145" class="label">Lazy Validator</text>
+  <text x="1030" y="163" class="text">Project tests (pytest/npm/cargo)</text>
+  <text x="1030" y="178" class="text">Returns: PASS | FAIL | REGRESSION</text>
+
+  <!-- Pre-Commit (NEW) -->
+  <rect x="1010" y="205" width="340" height="60" class="box-new"/>
+  <rect x="1010" y="205" width="32" height="14" class="badge-bg"/>
+  <text x="1016" y="215" class="badge">NEW</text>
+  <text x="1030" y="240" class="label-new">Pre-Commit Validator</text>
+  <text x="1030" y="258" class="text">Syntax check before commit</text>
+
+  <!-- Coherence Validator (NEW) -->
+  <rect x="1010" y="280" width="340" height="60" class="box-new"/>
+  <rect x="1010" y="280" width="32" height="14" class="badge-bg"/>
+  <text x="1016" y="290" class="badge">NEW</text>
+  <text x="1030" y="315" class="label-new">Coherence Validator</text>
+  <text x="1030" y="333" class="text">Cross-file type/import consistency</text>
+
+  <!-- Score Tracker -->
+  <rect x="1010" y="355" width="340" height="60" class="box"/>
+  <text x="1030" y="380" class="label">Validation Score Tracker</text>
+  <text x="1030" y="398" class="text">Tracks pass rate, detects edit churn</text>
+
+  <!-- Failure Taxonomy (NEW) -->
+  <rect x="1010" y="430" width="340" height="100" class="box-new"/>
+  <rect x="1010" y="430" width="32" height="14" class="badge-bg"/>
+  <text x="1016" y="440" class="badge">NEW</text>
+  <text x="1030" y="465" class="label-new">Failure Taxonomy Router</text>
+  <text x="1030" y="485" class="text">SYNTAX_ERROR: Rollback</text>
+  <text x="1030" y="500" class="text">TEST_FAIL: Add to context</text>
+  <text x="1030" y="515" class="text">STAGNATION: Escalate recovery</text>
+
+  <!-- ===== FLOW ARROWS (Simple straight lines) ===== -->
+
+  <!-- Orchestrator -> Context Builder -->
+  <line x1="310" y1="160" x2="370" y2="160" class="arrow"/>
+  <text x="320" y="152" class="flow-label">1. Request</text>
+
+  <!-- Context Builder -> Driver -->
+  <line x1="630" y1="150" x2="690" y2="150" class="arrow"/>
+  <text x="640" y="142" class="flow-label">2. Pack</text>
+
+  <!-- Driver -> Sandbox -->
+  <line x1="820" y1="200" x2="820" y2="215" class="arrow"/>
+
+  <!-- Sandbox -> Validation -->
+  <line x1="950" y1="265" x2="1010" y2="265" class="arrow"/>
+  <text x="955" y="257" class="flow-label">3. Diff</text>
+
+  <!-- Validation -> Observer (vertical down, then left) -->
+  <polyline points="1180,530 1180,700 500,700 500,540 310,540" class="arrow"/>
+  <text x="750" y="690" class="flow-label">4. Verdict + Logs</text>
+
+  <!-- Observer -> Orchestrator -->
+  <line x1="180" y1="510" x2="180" y2="200" class="arrow"/>
+  <text x="185" y="400" class="flow-label">5. Status</text>
+
+  <!-- ===== RECOVERY PATHS (Red dashed) ===== -->
+
+  <!-- Validation -> Graduated Recovery -->
+  <polyline points="1010,480 900,480 900,750 180,750 180,495" class="arrow-recovery"/>
+  <text x="500" y="740" class="flow-label" style="fill: #ef4444; font-weight: 600;">RECOVERY: Failure triggers graduated response</text>
+
+  <!-- Git Manager -> Sandbox (Rollback) -->
+  <polyline points="310,615 820,615 820,315" class="arrow-recovery"/>
+  <text x="500" y="607" class="flow-label" style="fill: #ef4444;">ROLLBACK</text>
+
+  <!-- Driver Swap (top arc) -->
+  <polyline points="180,120 180,60 820,60 820,120" class="arrow-recovery"/>
+  <text x="450" y="52" class="flow-label" style="fill: #ef4444;">DRIVER SWAP (Escalate to stronger model)</text>
+
+  <!-- ===== LEGEND ===== -->
+  <rect x="670" y="500" width="300" height="130" class="zone"/>
+  <text x="690" y="525" class="zone-header">LEGEND</text>
+  <rect x="690" y="540" width="20" height="14" class="box"/>
+  <text x="720" y="551" class="text">Existing component</text>
+  <rect x="690" y="560" width="20" height="14" class="box-new"/>
+  <text x="720" y="571" class="text">New in V3</text>
+  <line x1="690" y1="590" x2="710" y2="590" class="arrow"/>
+  <text x="720" y="594" class="text">Normal flow</text>
+  <line x1="690" y1="610" x2="710" y2="610" class="arrow-recovery"/>
+  <text x="720" y="614" class="text">Recovery path</text>
+
+</svg>

@@ -1,0 +1,9 @@
+{
+  "scenario_id": "oracle_contract_amendment",
+  "title": "Oracle Contract Amendment",
+  "version": 1,
+  "seed": 0,
+  "inputs": [],
+  "expected": [],
+  "notes": "Fill inputs/expected file lists with SHA256 hashes before production runs."
+}

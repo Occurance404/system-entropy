@@ -1,0 +1,10 @@
+{
+  "rate_per_unit": 2.0,
+  "tier_discounts": {
+    "gold": 0.2,
+    "silver": 0.1,
+    "standard": 0.0
+  },
+  "late_fee": 15.0,
+  "retroactive_multiplier": 1.0
+}

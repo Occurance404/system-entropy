@@ -1,0 +1,9 @@
+{
+  "scenario_id": "museum_renamed_species",
+  "title": "Museum of Renamed Species",
+  "version": 1,
+  "seed": 0,
+  "inputs": [],
+  "expected": [],
+  "notes": "Fill inputs/expected file lists with SHA256 hashes before production runs."
+}

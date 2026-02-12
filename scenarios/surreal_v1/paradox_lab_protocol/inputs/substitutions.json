@@ -1,0 +1,6 @@
+{
+  "SPECTROMETER": {
+    "replacement": "MANUAL_OPTICS",
+    "penalty_duration": 3
+  }
+}

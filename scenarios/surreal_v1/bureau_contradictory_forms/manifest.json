@@ -1,0 +1,9 @@
+{
+  "scenario_id": "bureau_contradictory_forms",
+  "title": "Bureau of Contradictory Forms",
+  "version": 1,
+  "seed": 0,
+  "inputs": [],
+  "expected": [],
+  "notes": "Fill inputs/expected file lists with SHA256 hashes before production runs."
+}

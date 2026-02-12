@@ -1,0 +1,5 @@
+event_id,incident_id,seq,timestamp,event_type,severity
+EV02,INC1,2,120,ALERT,3
+EV01,INC1,1,130,PRECURSOR,1
+EV04,INC2,2,210,ALERT,2
+EV03,INC2,1,220,PRECURSOR,1

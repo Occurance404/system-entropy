@@ -1,21 +1,30 @@
-import docker
-import time
 import os
 import io
 import tarfile
+from typing import Optional
+
+import docker
 
 class TerminalBenchConnector:
     """
     Provides a simple interface for External Agents to interact with the TerminalBench environment.
     Manages the Docker container lifecycle for a specific task.
     """
-    def __init__(self, task_id: str, image_name: str = "entropic-agent-sandbox"):
+    def __init__(
+        self,
+        task_id: str,
+        image_name: str = "entropic-agent-sandbox",
+        host_data_path: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ):
         self.task_id = task_id
         self.image_name = image_name
         self.client = docker.from_env()
-        self.container_name = f"tb_universal_{task_id}"
+        suffix = f"_{str(run_id)[:8]}" if run_id else ""
+        self.container_name = f"tb_universal_{task_id}{suffix}"
         self.container = None
         self.cwd = "/workspace"
+        self.host_data_path = os.path.abspath(host_data_path) if host_data_path else None
 
     def start(self):
         """Starts the Task Environment (Docker Container)."""
@@ -27,7 +36,7 @@ class TerminalBenchConnector:
         # Resolve absolute path for the sandbox data
         # Use dynamic path based on task_id (scenario_id)
         project_root = os.path.abspath(os.getcwd())
-        host_data_path = os.path.join(project_root, "data", f"sandbox_{self.task_id}")
+        host_data_path = self.host_data_path or os.path.join(project_root, "data", f"sandbox_{self.task_id}")
         
         # Ensure host path exists
         if not os.path.exists(host_data_path):

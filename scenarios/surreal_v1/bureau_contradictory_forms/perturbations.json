@@ -1,0 +1,7 @@
+[
+  {
+    "step": 4,
+    "type": "conflict",
+    "instruction": "CHANGE: Policy update changes authority precedence; recompute normalized records accordingly."
+  }
+]

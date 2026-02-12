@@ -1,0 +1,5 @@
+contract_id,base_amount,usage_units,customer_tier,late_days
+K001,120,10,gold,0
+K002,80,15,silver,3
+K003,90,8,standard,0
+K004,110,12,gold,5

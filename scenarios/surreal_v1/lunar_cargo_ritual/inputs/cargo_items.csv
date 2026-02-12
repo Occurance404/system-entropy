@@ -1,0 +1,7 @@
+item_id,mass_kg,volume_m3,value,mandatory,group
+I1,6,3,20,1,life_support
+I2,5,3,12,0,science
+I3,8,5,17,0,reactive
+I4,4,2,8,0,tools
+I5,3,3,10,0,food
+I6,7,4,16,1,power

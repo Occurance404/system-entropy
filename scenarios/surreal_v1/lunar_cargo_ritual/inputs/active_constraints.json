@@ -1,0 +1,5 @@
+{
+  "max_mass_kg": 22.0,
+  "max_volume_m3": 15.0,
+  "forbidden_pairs": [["I3", "I6"]]
+}
