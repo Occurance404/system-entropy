@@ -33,7 +33,7 @@ def run_rescue_experiment(
         print("ERROR: VLLM_API_KEY not set.")
         sys.exit(1)
         
-    if not rescue_model:
+    if enable_rescue and not rescue_model:
         print("WARNING: RESCUE_MODEL_NAME not set. Using 'gpt-4' as placeholder default.")
         rescue_model = "gpt-4" # Placeholder default
 

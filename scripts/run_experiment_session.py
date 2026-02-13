@@ -102,6 +102,36 @@ def _write_json(path: str, payload: Dict) -> None:
         json.dump(payload, f, indent=2, sort_keys=True)
 
 
+def _update_latest_pointer(base_dir: str, session_id: str, session_path: str) -> None:
+    _mkdir(base_dir)
+    latest_txt = os.path.join(base_dir, "LATEST")
+    latest_json = os.path.join(base_dir, "LATEST.json")
+    latest_link = os.path.join(base_dir, "latest")
+
+    with open(latest_txt, "w", encoding="utf-8") as f:
+        f.write(f"{session_id}\n")
+
+    _write_json(
+        latest_json,
+        {
+            "session_id": session_id,
+            "session_path": os.path.abspath(session_path),
+            "updated_at": datetime.now().isoformat(),
+        },
+    )
+
+    try:
+        if os.path.lexists(latest_link):
+            if os.path.islink(latest_link) or os.path.isfile(latest_link):
+                os.unlink(latest_link)
+            elif os.path.isdir(latest_link):
+                return
+        os.symlink(session_id, latest_link)
+    except Exception:
+        # Symlinks may be unavailable; keep text/json pointers as source of truth.
+        pass
+
+
 def _write_readme(paths: SessionPaths, meta: Dict, manifest_paths: List[str], log_paths: List[str]) -> None:
     readme_path = os.path.join(paths.root, "README.md")
     with open(readme_path, "w", encoding="utf-8") as f:
@@ -239,6 +269,7 @@ def main() -> int:
     }
     _write_json(os.path.join(paths.metadata, "index.json"), index_payload)
     _write_readme(paths, metadata, manifest_paths, log_paths)
+    _update_latest_pointer(args.base_dir, session_id, paths.root)
 
     print("")
     print(f"[done] exit={exit_code}")

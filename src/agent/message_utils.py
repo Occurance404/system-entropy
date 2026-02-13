@@ -143,12 +143,63 @@ def parse_tool_arguments(raw_arguments: Any, tool_name: str) -> Optional[Dict[st
     return coerce_tool_args(tool_name, raw)
 
 
+def parse_used_tool_signature(
+    text: Any,
+    *,
+    known_tools: Set[str],
+    aliases: Dict[str, str],
+) -> Optional[Dict[str, Any]]:
+    if not isinstance(text, str):
+        return None
+    raw = text.strip()
+    if not raw:
+        return None
+
+    # Providers often prepend prose before the actual tool line.
+    marker_idx = raw.rfind("Used tool:")
+    if marker_idx > 0:
+        raw = raw[marker_idx:].strip()
+
+    # Some models mirror the orchestrator history string format:
+    # "Used tool: <tool_name> with args: {...}"
+    match = re.match(
+        r"^\s*Used tool:\s*(?P<tool>[A-Za-z0-9_.-]+)\s*(?:with args:\s*(?P<args>.+))?\s*$",
+        raw,
+        flags=re.DOTALL,
+    )
+    if not match:
+        return None
+
+    tool_name = normalize_tool_name(match.group("tool"), known_tools=known_tools, aliases=aliases)
+    if not tool_name:
+        return None
+
+    args_raw = (match.group("args") or "").strip()
+    if not args_raw:
+        coerced_args = coerce_tool_args(tool_name, {})
+    else:
+        coerced_args = parse_tool_arguments(args_raw, tool_name)
+    if coerced_args is None:
+        return None
+    return {"type": "tool_use", "tool": tool_name, "content": coerced_args}
+
+
 def normalize_text_tool_call(
     obj: Any,
     *,
     known_tools: Set[str],
     aliases: Dict[str, str],
 ) -> Optional[Dict[str, Any]]:
+    if isinstance(obj, str):
+        parsed_used_tool = parse_used_tool_signature(obj, known_tools=known_tools, aliases=aliases)
+        if parsed_used_tool is not None:
+            return parsed_used_tool
+
+        extracted = extract_first_json_object(obj)
+        if extracted is None:
+            return None
+        obj = extracted
+
     if isinstance(obj, list):
         obj = next((x for x in obj if isinstance(x, dict)), None)
     if not isinstance(obj, dict):
@@ -184,6 +235,24 @@ def normalize_text_tool_call(
         content = obj.get("content") or obj.get("answer") or obj.get("final")
         if content is None:
             content = ""
+
+        # Some providers wrap tool intent inside an llm_reply payload.
+        if isinstance(content, str):
+            parsed_used_tool = parse_used_tool_signature(content, known_tools=known_tools, aliases=aliases)
+            if parsed_used_tool is not None:
+                return parsed_used_tool
+
+            nested = extract_first_json_object(content)
+            if isinstance(nested, dict):
+                nested_type = str(nested.get("type") or "").strip().lower()
+                nested_toolish = bool(nested.get("tool") or nested.get("name") or nested.get("function"))
+                if nested_type in ("tool_use", "tool", "function_call", "call_tool") or nested_toolish:
+                    normalized_nested = normalize_text_tool_call(
+                        nested, known_tools=known_tools, aliases=aliases
+                    )
+                    if normalized_nested is not None and normalized_nested.get("type") == "tool_use":
+                        return normalized_nested
+
         return {"type": "llm_reply", "content": str(content)}
 
     return None

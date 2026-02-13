@@ -118,6 +118,11 @@ To avoid mixed outputs, run experiments through the session wrapper. Each run ge
 Session outputs are written to:
 `data/experiments/<timestamp>_<name>/`
 
+The wrapper also keeps a moving pointer to the newest session:
+- `data/experiments/LATEST`
+- `data/experiments/LATEST.json`
+- `data/experiments/latest` (symlink when supported)
+
 ### Fair Real-Agent Runner (recommended for clean intelligence evaluation)
 
 Use this when you want to reduce technical noise (tool capability mismatch, probe overhead, mixed logs) and give the agent a fair chance:

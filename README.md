@@ -27,6 +27,10 @@ A research framework to study how LLM-based agents behave under non-stationary t
     .venv/bin/python experiments/run_rescue_experiment.py --scenario_id drug_filter_shock --max_steps 20
   ```
   This writes everything under `data/experiments/<timestamp>_<name>/` so runs do not mix.
+  It also updates:
+  - `data/experiments/LATEST`
+  - `data/experiments/LATEST.json`
+  - `data/experiments/latest` (symlink when supported)
 - Fair real-agent launcher (preflight + capability-aware defaults):
   ```bash
   .venv/bin/python scripts/run_fair_real_session.py --mode rescue_baseline --scenario_id drug_filter_shock --max_steps 20

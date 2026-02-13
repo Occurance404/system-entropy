@@ -4,7 +4,7 @@ import asyncio
 import time
 import threading
 from typing import List, Dict, Any, Optional
-from openai import OpenAI, AsyncOpenAI, APIConnectionError, RateLimitError, APIError
+from openai import OpenAI, AsyncOpenAI, APIConnectionError, RateLimitError, APIError, APITimeoutError
 from src.agent.message_utils import (
     build_dynamic_execution_guidance,
     coerce_tool_args,
@@ -36,7 +36,7 @@ def retry_request(max_retries=3, backoff_factor=2):
             while retries <= max_retries:
                 try:
                     return func(*args, **kwargs)
-                except (APIConnectionError, RateLimitError, APIError) as e:
+                except (APIConnectionError, RateLimitError, APIError, APITimeoutError) as e:
                     retries += 1
                     if retries > max_retries:
                         print(f"Agent Error: Max retries exceeded for {func.__name__}. Error: {e}")
@@ -67,17 +67,23 @@ class OpenAICompatibleAgent(AgentWrapper):
         base_url = base_url or os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
         api_key = api_key or os.getenv("VLLM_API_KEY", "EMPTY")
         self.base_url = base_url
+        try:
+            self.request_timeout_seconds = max(10.0, float(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS") or "180"))
+        except Exception:
+            self.request_timeout_seconds = 180.0
         
         # Sync client for standard steps (to keep Orchestrator simple)
         self.client = OpenAI(
             base_url=base_url,
-            api_key=api_key
+            api_key=api_key,
+            timeout=self.request_timeout_seconds,
         )
         
         # Async client for parallel probing
         self.async_client = AsyncOpenAI(
             base_url=base_url,
-            api_key=api_key
+            api_key=api_key,
+            timeout=self.request_timeout_seconds,
         )
 
         # Some providers/models do not support token logprobs. Default to "auto":
@@ -309,8 +315,12 @@ class OpenAICompatibleAgent(AgentWrapper):
                 # Text-tools fallback (no native tool_calls).
                 content_text = self._content_to_text(getattr(message, "content", ""))
                 if content_text:
-                    extracted = self._extract_first_json_object(content_text)
-                    normalized = self._normalize_text_tool_call(extracted)
+                    # Try full text first so patterns like
+                    # "Used tool: run_shell with args: {...}" are preserved.
+                    normalized = self._normalize_text_tool_call(content_text)
+                    if normalized is None:
+                        extracted = self._extract_first_json_object(content_text)
+                        normalized = self._normalize_text_tool_call(extracted)
                     if normalized and normalized.get("type") == "tool_use":
                         normalized["logprobs"] = token_logprobs
                         normalized["usage"] = usage
