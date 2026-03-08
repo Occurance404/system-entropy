@@ -70,12 +70,13 @@
 }
 
 @article{Chen2023ToolEmu,
-  author = {Chen, J. and others},
+  author = {Ruan, Yangjun and Dong, Honghua and Wang, Andrew and Pitis, Silviu and Zhou, Yongchao and Ba, Jimmy and Dubois, Yann and Maddison, Chris J. and Hashimoto, Tatsunori},
   title = {Identifying the Risks of LM Agents with an LM-Emulated Sandbox},
   journal = {arXiv},
   year = {2023},
   archivePrefix = {arXiv},
-  eprint = {2309.15817}
+  eprint = {2309.15817},
+  note = {Accepted at ICLR 2024}
 }
 
 @article{Zhou2024ToolSandbox,
@@ -573,12 +574,13 @@
 % ============================================================================
 
 @article{Wang2025SavingSWE,
-  author = {Wang, Y. and others},
+  author = {Wang, Yuntong and others},
   title = {Saving SWE-Bench: A Benchmark Mutation Approach for Realistic Agent Evaluation},
   journal = {arXiv},
   year = {2025},
   archivePrefix = {arXiv},
-  eprint = {2510.08996}
+  eprint = {2510.08996},
+  note = {Builds on leakage findings from Aleithan et al. (SWE-Bench+, 2024)}
 }
 
 @article{Jimenez2024SWEBenchPlus,
@@ -946,6 +948,57 @@
 }
 
 % ============================================================================
+% NEWLY ADDED REFERENCES (creative additions)
+% ============================================================================
+
+@article{Aleithan2024SWEBenchPlus,
+  title={SWE-Bench+: Enhanced Coding Benchmark for {LLM}s},
+  author={Aleithan, Reem and others},
+  journal={arXiv preprint arXiv:2410.06992},
+  year={2024},
+  note={Identifies 32.67\% solution leakage and 31.08\% weak tests in SWE-bench}
+}
+
+@article{Agarwal2025FAILS,
+  title={{FAILS}: A Framework for Automated Collection and Analysis of {LLM} Service Incidents},
+  author={Agarwal, Shubham and others},
+  journal={arXiv},
+  year={2025},
+  archivePrefix={arXiv},
+  eprint={2501.11431},
+  note={Open-source framework for systematic LLM incident analysis with 17 failure analysis types}
+}
+
+@article{Doris2025HAL,
+  title={HAL: Holistic Agent Leaderboard for Reproducible and Cost-Controlled Agent Benchmarking},
+  author={Doris, Nicholas and others},
+  journal={arXiv},
+  year={2025},
+  archivePrefix={arXiv},
+  note={Presents Pareto frontiers of accuracy vs cost for agent evaluation}
+}
+
+@article{Patel2025InferenceReliability,
+  title={Enhancing Reliability in {AI} Inference Services: An Empirical Study on Real Production Incidents},
+  author={Patel, V. and others},
+  journal={arXiv},
+  year={2025},
+  archivePrefix={arXiv},
+  eprint={2511.07424},
+  note={60\% of cloud-scale inference failures are engine failures; 40\% of those are timeouts}
+}
+
+@article{Biderman2024LMEvalHarness,
+  title={Lessons from the Trenches on Reproducible Evaluation of Language Models},
+  author={Biderman, Stella and others},
+  journal={arXiv},
+  year={2024},
+  archivePrefix={arXiv},
+  eprint={2405.14782},
+  note={Design of lm-evaluation-harness; documents evaluation confounds such as prompt sensitivity}
+}
+
+% ============================================================================
 % END OF BIBTEX FILE
 % ============================================================================
 
@@ -1128,10 +1181,11 @@
 }
 
 @article{tyen2024mast,
-  title={MAST: A Failure Taxonomy for Multi-Agent LLM Systems},
-  author={Tyen, Gladys and others},
-  journal={arXiv preprint arXiv:2410.11429},
-  year={2024}
+  title={Why Do Multi-Agent LLM Systems Fail?},
+  author={Cemri, Mert and Pan, Melissa Z. and Yang, Shuyi and Agrawal, Lakshya A. and Chopra, Bhavya and Tiwari, Rishabh and Keutzer, Kurt and Parameswaran, Aditya and Klein, Dan and Ramchandran, Kannan and Zaharia, Matei and Gonzalez, Joseph E. and Stoica, Ion},
+  journal={arXiv preprint arXiv:2503.13657},
+  year={2025},
+  note={Introduces MAST taxonomy with 14 failure modes}
 }
 
 @article{zhang2024systemfailures,
