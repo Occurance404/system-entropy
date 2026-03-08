@@ -94,7 +94,8 @@ def main() -> None:
 
     grouped = df.groupby(group_keys, dropna=False)
     summary = grouped.agg(
-        runs=("run_id", "count"),
+        # Count rows, not non-null run_id values: failed runs may have missing run_id.
+        runs=("scenario_id", "size"),
         success_rate=("validation_passed", _success_rate),
         median_steps=("steps_executed", "median"),
         median_total_tokens=("total_tokens", "median"),

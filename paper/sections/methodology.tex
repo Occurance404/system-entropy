@@ -1,51 +1,65 @@
 \section{Methodology}
 \label{sec:methodology}
 
-\subsection{Problem Setting}
-We study tool-using language-model agents in \emph{non-stationary} task environments, where objectives can change mid-trajectory. Let a run be a sequence of agent-environment interactions
+\subsection{Evaluation Objective}
+The objective of this study is to evaluate whether tool-using language-model agents remain behaviorally coherent when task constraints change mid-execution. We therefore evaluate both endpoint correctness and post-perturbation adaptation quality.
+
+We model one run as a trajectory of agent-environment interactions
 \[
 \tau = (s_1, a_1, o_1, \dots, s_T, a_T, o_T),
 \]
-where \(s_t\) is the orchestrator state and dialogue context, \(a_t\) is either a tool action or language reply, and \(o_t\) is sandbox feedback. A perturbation operator \(P_k\) is applied at predetermined step indices \(k\), modifying either requirements, environment state, or both. The core evaluation question is not only whether the final artifact is correct, but whether the agent adapts after \(P_k\) without collapsing into stale or repetitive behavior.
+where \(s_t\) is orchestrator state and dialogue context, \(a_t\) is agent action, and \(o_t\) is sandbox feedback. At predetermined indices \(k\), a perturbation operator \(P_k\) modifies requirements, environment state, or both. The key question is whether the policy adapts after \(P_k\) without entering stale plans or repetitive tool loops.
 
 \subsection{Experimental Unit and Controls}
-The atomic unit of analysis is one \((\text{model}, \text{scenario}, \text{seed}, \text{budget})\) run. All runs are executed by the same harness and differ only in controlled independent variables: model identity, scenario, step budget, completion-token cap, and probe configuration. We keep tool surface area fixed and use deterministic validators so correctness labels are not model-dependent.
+The atomic unit of analysis is one \((\text{model}, \text{scenario}, \text{seed}, \text{budget})\) run. All runs are executed by the same harness and differ only in controlled variables: model identity, scenario, step budget, completion-token cap, and probe regime. Tool interface and validator logic are held fixed across models, so correctness labels are not affected by evaluator drift.
 
-\subsection{Runtime Architecture}
-The runtime has four modules. The orchestrator (\texttt{src/orchestrator/core/orchestrator.py}) executes the step loop, injects perturbations, and applies stop rules. The agent (\texttt{src/agent/real\_agent.py}) emits either \texttt{tool\_use} or \texttt{llm\_reply}. The sandbox connector executes filesystem/shell operations with deterministic local semantics. Validators and monitors (\texttt{src/scenarios/validation\_ops.py}, \texttt{src/monitor/terminal\_bench\_monitor.py}) provide ground-truth completion checks and per-step telemetry. Each step is persisted as JSONL, and each run writes a manifest plus full session artifacts under \texttt{data/experiments/<session\_id>/}.
+\subsection{Runtime Architecture and Trace Collection}
+The runtime has four modules. The orchestrator (\texttt{src/orchestrator/core/orchestrator.py}) runs the step loop, injects perturbations, and applies stopping rules. The agent (\texttt{src/agent/real\_agent.py}) emits \texttt{tool\_use} or \texttt{llm\_reply} actions. The sandbox connector executes filesystem and shell operations with deterministic local semantics. Validators and monitors (\texttt{src/scenarios/validation\_ops.py}, \texttt{src/monitor/terminal\_bench\_monitor.py}) provide ground-truth completion checks and step telemetry.
+
+\subsection{Agent Architecture}
+The agent is implemented as a policy over accumulated interaction history. Let \(h_t\) denote the conversation and tool-output context at step \(t\). The policy emits an action
+\[
+a_t = \pi_\theta(h_t),
+\]
+where \(a_t\) is either a structured \texttt{tool\_use} call (tool name plus JSON arguments) or a free-text \texttt{llm\_reply}. After sandbox execution returns observation \(o_t\), context is updated as
+\[
+h_{t+1} = U(h_t, a_t, o_t).
+\]
+This update rule is important operationally: tool outputs are persisted into future prompts, so policy behavior depends on both language history and environment feedback.
+
+Branching probes reuse the same architecture but call a multi-sample generation path (\texttt{generate\_multiple}) at probe steps. Probe branches are not executed in the sandbox; they are sampled for semantic-divergence measurement only. This keeps the production action path and the observability path clearly separated while sharing the same underlying model interface.
 
 \subsection{Scenario Design}
-Each scenario contains (i) an initial objective, (ii) a perturbation schedule with explicit step indices, and (iii) a deterministic validator over output artifacts. Perturbations are implemented as requirement changes visible to the agent and, where needed, synchronized sandbox mutations (e.g., switching active policy files). This design ensures identical task dynamics across models and isolates adaptation behavior from environment randomness.
+Each scenario contains an initial objective, a perturbation schedule with explicit step indices, and a deterministic validator over output artifacts. Perturbations are implemented as user-visible requirement changes and, when required, synchronized sandbox mutations. This keeps task dynamics matched across models and isolates adaptation effects from environment randomness.
 
-\subsection{Interaction Protocol}
-At step \(t\), the agent receives accumulated dialogue history plus latest tool outputs. The agent emits either:
+\subsection{Interaction Protocol and Outcome Labeling}
+At step \(t\), the agent receives full accumulated dialogue history and latest tool outputs, then emits either
 \begin{equation*}
 a_t \in \{\texttt{tool\_use}(\text{name}, \text{args}),\ \texttt{llm\_reply}(\text{text})\}.
 \end{equation*}
-Tool outputs are appended back into context. Consequently, prompt length grows with trajectory length. This is intentional: the benchmark should expose context-pressure effects that short static benchmarks hide.
+Tool outputs are appended to context for subsequent steps. Prompt length therefore grows with trajectory length; this is intentional because long-context pressure is part of the target failure regime.
 
-\subsection{Outcome Definition and Stopping}
-Primary completion is validator pass. Auxiliary stop signals are optional done-claim detection and optional AI-verifier verdict at confidence threshold. For reporting, validator pass is the authoritative outcome label; done claims and verifier decisions are treated as behavioral covariates (e.g., false completion claims).
+Primary completion is validator pass. Done claims and optional AI-verifier outputs are logged as behavioral covariates but are not used as authoritative success labels.
 
 \subsection{Metrics}
-We report both outcome and dynamics metrics.
+We report endpoint and dynamics metrics.
 
 \paragraph{Task Outcome.}
 Validator success (\(0/1\)), step-to-success (or timeout), and run-level token cost.
 
 \paragraph{Semantic Collapse Ratio (SCR).}
-At probe time, the system samples \(N\) branched next-step responses and embeds each branch \(v_i\). SCR is mean pairwise cosine distance:
+At probe time, the system samples \(N\) branched next-step responses and embeds each branch \(v_i\). SCR is the mean pairwise cosine distance:
 \[
 \mathrm{SCR} = \frac{1}{N(N-1)}\sum_{i\neq j} d_{\cos}(v_i,v_j).
 \]
-Larger SCR indicates higher next-step semantic divergence. If fewer than two valid probe branches exist, SCR is recorded as \texttt{null}.
+Higher SCR indicates greater semantic divergence among candidate next actions. If fewer than two valid probe branches exist, SCR is recorded as \texttt{null}.
 
 \paragraph{Entropy Proxy and Coverage.}
-When token logprobs are available, we compute chosen-token surprisal:
+When token logprobs are available, we compute chosen-token surprisal over generated token positions \(u=1,\dots,L\):
 \[
-H = -\frac{1}{T}\sum_{t=1}^{T}\log p(x_t).
+H = -\frac{1}{L}\sum_{u=1}^{L}\log p(x_u).
 \]
-Because many providers do not expose reliable logprobs, missing entropy is represented as \texttt{null} (never imputed). We therefore report \emph{entropy coverage}, the proportion of eligible steps with non-null entropy.
+Because many providers do not expose reliable logprobs, missing entropy is represented as \texttt{null} and never imputed. We therefore report \emph{entropy coverage}, the proportion of eligible non-probe steps with non-null entropy.
 
 \paragraph{Information Gain Efficiency (IGE).}
 For steps with valid pre/post entropy around a tool interaction:
@@ -58,13 +72,50 @@ IGE is undefined when entropy is unavailable.
 We log RDI (semantic drift from goal text), compression ratio of language replies (loop/stagnation proxy), code-branching factor on Python writes, panic counter, and intervention triggers.
 
 \subsection{Probe Regimes}
-We evaluate three probe regimes: off, shock-only, and periodic. Shock-only probes run at perturbation steps; periodic probes run every \(k\) steps when no perturbation is active at that step. Probe-token usage is tracked separately (\texttt{probe\_total\_tokens}) so cost analyses can distinguish task tokens from probe overhead.
+We evaluate three probe regimes: off, shock-only, and periodic. Shock-only probes run at perturbation steps; periodic probes run every \(k\) steps when no perturbation is active at that step. Probe token usage is tracked separately (\texttt{probe\_total\_tokens}) so cost analyses can distinguish task-solving cost from diagnostic overhead.
+
+\paragraph{Probe Trigger Indicator.}
+Let \(I_t \in \{0,1\}\) indicate whether a probe is executed at step \(t\). For shock indices \(K_{\text{shock}}\) and periodic interval \(k\):
+\[
+I_t = \mathbf{1}\!\left[t \in K_{\text{shock}} \;\lor\; (\text{mode}=\text{periodic} \land t \bmod k = 0)\right].
+\]
+This indicator makes probe scheduling explicit in downstream analyses.
 
 \subsection{Context and Cost Accounting}
-For each step we record \texttt{prompt\_tokens}, \texttt{completion\_tokens}, and \texttt{total\_tokens} when supplied by the provider. Because history is resent each step, prompt-token growth is expected in long trajectories. We therefore report both per-step token trajectories and aggregate run-level totals, and analyze robustness as a function of context growth rather than only final cost.
+For each step we record \texttt{prompt\_tokens}, \texttt{completion\_tokens}, and \texttt{total\_tokens} when supplied by the provider. Because history is resent each step, prompt growth is expected in long trajectories. We therefore report both step-level trajectories and run-level totals.
+
+\paragraph{Cost Decomposition.}
+Run-level token cost is decomposed as
+\[
+C_{\text{total}} = C_{\text{task}} + C_{\text{probe}},
+\]
+where \(C_{\text{probe}}\) is measured directly from \texttt{probe\_total\_tokens}. This decomposition separates diagnostic overhead from task-solving cost.
 
 \subsection{Statistical Reporting Plan}
-For each condition, we report success rate, median steps, and token-cost distributions. For perturbation robustness, we report SCR summaries at shock steps and recovery latency (steps from perturbation to first validator pass, when achieved). For final tables, uncertainty should be reported using bootstrap confidence intervals over repeated runs per condition. Model comparisons should use matched scenario sets and seed schedules.
+For each condition, we report success rate, median steps, and token-cost distributions. For perturbation robustness, we report SCR summaries at shock steps and recovery latency (steps from perturbation to first validator pass, when achieved). Final uncertainty estimates are reported using bootstrap confidence intervals over repeated runs. Model comparisons use matched scenario sets and seed schedules.
+
+\paragraph{Entropy Coverage.}
+For eligible non-probe step set \(\mathcal{T}_{\text{elig}}\), entropy coverage is
+\[
+\mathrm{Coverage}_H =
+\frac{\sum_{t \in \mathcal{T}_{\text{elig}}}\mathbf{1}[H_t \neq \texttt{null}]}
+{|\mathcal{T}_{\text{elig}}|}.
+\]
+This prevents missing logprob support from being conflated with low uncertainty.
+
+\paragraph{Recovery Latency.}
+For perturbation step \(t_{\text{shock}}\), recovery latency is
+\[
+L_{\text{rec}} = t_{\text{first-pass-after-shock}} - t_{\text{shock}},
+\]
+and is undefined for runs that never pass after perturbation.
+
+\paragraph{Condition-Level Success Estimator.}
+For condition runs \(i=1,\dots,n\) with validator outcomes \(y_i \in \{0,1\}\), we report
+\[
+\hat{p} = \frac{1}{n}\sum_{i=1}^{n} y_i,
+\]
+with bootstrap confidence intervals over runs.
 
 \subsection{Reproducibility}
-Reproducibility is enforced by deterministic scenario assets, deterministic validators, fixed harness configuration, and full run manifests. Because every step and artifact is serialized, all aggregate results can be regenerated directly from session directories without manual relabeling.
+Reproducibility is enforced by deterministic scenario assets, deterministic validators, fixed harness configuration, and full run manifests. Each run writes structured JSONL step logs and manifest metadata under \texttt{data/experiments/<session\_id>/}. Because every step and artifact is serialized, aggregate results can be regenerated directly from session directories without manual relabeling.

@@ -1,0 +1,235 @@
+\section{Appendix: SWE-PolyBench Campaign Results (Run 20260225\_231718)}
+\label{app:swepolybench-20260225-231718}
+
+This appendix reports the finalized workload-scale SWE-PolyBench campaign for run tag \texttt{20260225\_231718}. The campaign executed 500 total task-runs (100 per model across five models), with 34 validator-confirmed successes and 466 failures, for an aggregate success rate of 0.068. For behavioral interpretation, we separate operationally confounded rows from the clean non-infrastructure slice.
+
+In this campaign, SCR\_probe values were generated with the lexical-hash fallback backend (semantic SentenceTransformer weights were unavailable at run time). Accordingly, SCR\_probe in this appendix should be read as a proxy instability signal.
+
+\subsection{Operational Outcomes (All Rows)}
+Table~\ref{tab:app-all-rows} reports model outcomes over all 500 rows, including infrastructure-prefetch failures. These values represent full-stack operational outcomes and should not be used alone for model-behavior ranking.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \resizebox{\linewidth}{!}{%
+  \begin{tabular}{lrrrrrrr}
+    \toprule
+    Model & Runs & Successes & Success Rate & Zero-step Rate & Infra-prefetch Rate & Median Tokens (incl. probes) & Successes / 1M Tokens \\
+    \midrule
+    \texttt{google/gemini-3-flash-preview} & 100 & 14 & 0.140 & 0.060 & 0.000 & 562154.0 & 0.249 \\
+    \texttt{moonshotai/kimi-k2.5} & 100 & 12 & 0.120 & 0.090 & 0.000 & 545931.0 & 0.233 \\
+    \texttt{deepseek/deepseek-v3.2} & 100 & 5 & 0.050 & 0.210 & 0.200 & 656903.5 & 0.092 \\
+    \texttt{openai/gpt-5-mini} & 100 & 3 & 0.030 & 0.030 & 0.000 & 713898.5 & 0.038 \\
+    \texttt{z-ai/glm-4.7} & 100 & 0 & 0.000 & 0.980 & 0.950 & 0.0 & 0.000 \\
+    \bottomrule
+  \end{tabular}%
+  }
+  \caption{Model outcomes on all campaign rows (operational view).}
+  \label{tab:app-all-rows}
+\end{table}
+
+\subsection{Behavioral Slice (Non-Infrastructure Rows)}
+Table~\ref{tab:app-clean-rows} removes infrastructure-prefetch failures and is the primary source for behavior-centric comparison in this campaign.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \resizebox{\linewidth}{!}{%
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    Model & Runs & Successes & Success Rate & Zero-step Rate & Median Tokens (incl. probes) & Successes / 1M Tokens \\
+    \midrule
+    \texttt{google/gemini-3-flash-preview} & 100 & 14 & 0.140 & 0.060 & 562154.0 & 0.249 \\
+    \texttt{moonshotai/kimi-k2.5} & 100 & 12 & 0.120 & 0.090 & 545931.0 & 0.233 \\
+    \texttt{deepseek/deepseek-v3.2} & 80 & 5 & 0.062 & 0.013 & 695056.0 & 0.092 \\
+    \texttt{openai/gpt-5-mini} & 100 & 3 & 0.030 & 0.030 & 713898.5 & 0.038 \\
+    \texttt{z-ai/glm-4.7} & 5 & 0 & 0.000 & 0.600 & 0.0 & 0.000 \\
+    \bottomrule
+  \end{tabular}%
+  }
+  \caption{Model outcomes on the clean non-infrastructure subset.}
+  \label{tab:app-clean-rows}
+\end{table}
+
+\subsection{Probe Observability and SCR\_probe Coverage}
+Table~\ref{tab:app-probe} reports probe-log coverage and per-run SCR\_probe summaries. Coverage and divergence must be interpreted jointly: low-coverage models support weaker comparative conclusions.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \resizebox{\linewidth}{!}{%
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    Model & Probe Coverage & Runs w/ Probe Logs & Runs w/ SCR\_probe & Median SCR\_probe (median) & Median SCR\_probe (max) & Median Probe Events \\
+    \midrule
+    \texttt{openai/gpt-5-mini} & 0.94 & 94 & 65 & 0.444 & 0.529 & 6 \\
+    \texttt{moonshotai/kimi-k2.5} & 0.90 & 90 & 90 & 0.475 & 0.721 & 6 \\
+    \texttt{google/gemini-3-flash-preview} & 0.90 & 90 & 90 & 0.325 & 0.552 & 6 \\
+    \texttt{deepseek/deepseek-v3.2} & 0.76 & 76 & 76 & 0.371 & 0.611 & 6 \\
+    \texttt{z-ai/glm-4.7} & 0.02 & 2 & 2 & 0.445 & 0.545 & 0 \\
+    \bottomrule
+  \end{tabular}%
+  }
+  \caption{SCR\_probe availability and divergence summary by model.}
+  \label{tab:app-probe}
+\end{table}
+
+\subsection{Failure Forensics}
+Table~\ref{tab:app-fail-cats} summarizes dominant failure categories. Table~\ref{tab:app-fail-repos} reports repositories with the highest non-infrastructure failure concentration. The dominant class is \texttt{agent\_executed\_other\_failure} (295 runs), while \texttt{infra\_dns\_mirror\_fetch} (115 runs) captures the main infrastructure confound in this campaign.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{lr}
+    \toprule
+    Failure Category & Count \\
+    \midrule
+    \texttt{agent\_executed\_other\_failure} & 295 \\
+    \texttt{infra\_dns\_mirror\_fetch} & 115 \\
+    \texttt{test\_failure} & 22 \\
+    \texttt{validator\_none\_splitlines} & 20 \\
+    \texttt{compile\_error} & 8 \\
+    \texttt{js\_build\_or\_test\_failure} & 4 \\
+    \texttt{api\_timeout} & 2 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Top failure categories across the campaign.}
+  \label{tab:app-fail-cats}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{lr}
+    \toprule
+    Repository & Non-infra Failure Count \\
+    \midrule
+    \texttt{huggingface/transformers} & 65 \\
+    \texttt{mui/material-ui} & 60 \\
+    \texttt{serverless/serverless} & 48 \\
+    \texttt{trinodb/trino} & 36 \\
+    \texttt{prettier/prettier} & 28 \\
+    \texttt{microsoft/vscode} & 25 \\
+    \texttt{sveltejs/svelte} & 24 \\
+    \texttt{apache/rocketmq} & 22 \\
+    \texttt{google/gson} & 16 \\
+    \texttt{keras-team/keras} & 12 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Top repositories by non-infrastructure failure count.}
+  \label{tab:app-fail-repos}
+\end{table}
+
+\subsection{GLM-5 Follow-Up Snapshot (Run 20260305\_020845\_glm5)}
+Table~\ref{tab:app-glm5-followup} reports the single-model follow-up on the same 100-task sample used by the primary campaign. This snapshot is included to provide a replacement estimate for the GLM family after the GLM-4.7 infrastructure-dominated outcome.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    Model & Runs & Successes & Success Rate & Zero-step Rate & Infra-prefetch Rate & Median Tokens (incl. probes) \\
+    \midrule
+    \texttt{z-ai/glm-5} & 100 & 14 & 0.140 & 0.110 & 0.000 & 520435.0 \\
+    \bottomrule
+  \end{tabular}
+  \caption{GLM-5 follow-up outcome on the same SWE-PolyBench 100-task sample.}
+  \label{tab:app-glm5-followup}
+\end{table}
+
+\subsection{Appendix Figure Pack}
+Figures~\ref{fig:app-workload-panels}--\ref{fig:app-ops-panels} provide the complete appendix visualization set for the primary campaign. Figure~\ref{fig:app-glm5-workload} adds the GLM-5 follow-up snapshot.
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_workload_summary_panel_all.png}
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_workload_summary_panel_clean_noninfra.png}
+  \caption{Workload summary panels. Left: operational all-row view. Right: clean non-infrastructure view used for behavior-focused interpretation.}
+  \label{fig:app-workload-panels}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_failure_composition_all.png}
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_failure_composition_clean_noninfra.png}
+  \caption{Failure composition panels. Left includes infrastructure confounds; right isolates non-infrastructure failures for behavioral analysis.}
+  \label{fig:app-failure-panels}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_scr_probe_distribution.png}
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_probe_log_coverage.png}
+  \caption{Probe instability and observability. SCR\_probe values (left) should be interpreted jointly with probe-log coverage (right).}
+  \label{fig:app-probe-panels}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_token_breakdown_task_vs_probe.png}
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_successes_per_million_tokens.png}
+  \caption{Token-cost view. Left separates task tokens and probe tokens; right reports cost-normalized successful throughput.}
+  \label{fig:app-cost-panels}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_forensics/fig_forensics_failure_categories_overall.png}
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_forensics/fig_forensics_failure_categories_by_model.png}
+  \caption{Failure forensics by category. Left shows campaign-level concentration; right shows model-level composition differences.}
+  \label{fig:app-forensics-categories}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_forensics/fig_forensics_repo_failures_noninfra_top15.png}
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_forensics/fig_forensics_hard_instances_heatmap_noninfra.png}
+  \caption{Failure structure by workload unit. Left shows repository concentration; right shows hard-instance clustering across models.}
+  \label{fig:app-forensics-structure}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_infra_prefetch_failure_rate.png}
+  \includegraphics[width=0.49\linewidth]{figures_models_20260225_231718_final/fig_chunk_completion_timeline.png}
+  \caption{Operational context. Left quantifies infrastructure-prefetch confounds; right shows chunk-level execution completion over time.}
+  \label{fig:app-ops-panels}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.75\linewidth]{figures_models_20260305_020845_glm5_final/fig_workload_summary_panel_all.png}
+  \caption{GLM-5 follow-up workload summary panel from run \texttt{20260305\_020845\_glm5}, used as a post-hoc replacement estimate for the GLM family.}
+  \label{fig:app-glm5-workload}
+\end{figure}
+
+\subsection{Extended Observability Metrics (Non-Headline)}
+The following definitions are retained for completeness but are not used as headline comparative claims in this paper because logprob coverage is not uniform across providers/runs.
+
+\textbf{Entropy coverage.} Entropy is computed only when logprobs are available. Coverage is the fraction of non-probe steps with entropy values.
+
+\textbf{Entropy definition (chosen-token proxy).}
+\[
+H = -\frac{1}{N} \sum_{i=1}^{N} \log p(t_i)
+\]
+where $p(t_i)$ is the chosen-token probability. This is a chosen-token surprisal proxy, not full distributional entropy.
+
+\textbf{Information Gain Efficiency (IGE).}
+\[
+IGE = \frac{H_{pre} - H_{post}}{TokenCost}
+\]
+IGE is undefined when logprobs are unavailable.
+
+\subsection{Reproducibility Anchors}
+The canonical artifact bundle for this appendix is under \texttt{data/results/}. Key files:
+\begin{itemize}
+  \item \texttt{benchmark\_swepolybench\_models\_20260225\_231718.csv}
+  \item \texttt{swepolybench\_models\_20260225\_231718\_model\_summary\_all.csv}
+  \item \texttt{swepolybench\_models\_20260225\_231718\_model\_summary\_clean\_noninfra.csv}
+  \item \texttt{swepolybench\_models\_20260225\_231718\_probe\_scr\_summary\_by\_model.csv}
+  \item \texttt{figures\_models\_20260225\_231718\_final/}
+  \item \texttt{benchmark\_swepolybench\_models\_20260305\_020845\_glm5.csv}
+  \item \texttt{figures\_models\_20260305\_020845\_glm5\_final/}
+\end{itemize}
+
+Regeneration commands are tracked in \texttt{paper/REPRO\_COMMANDS\_SUPPLEMENT.md}.
